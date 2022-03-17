@@ -1,0 +1,63 @@
+<launch>
+    
+    <!--................param needed to be changed when using mdc...............-->
+    
+    <!-- <param name="bag_path" type="string" value="/home/ding/backup/dataset/haibo/0119s95.bag" />
+    <param name="map_path" type="string" value="/home/ding/backup/dataset/haibo/lt_lidar_map" />
+    <param name="saved_json_path" type="string" value="/home/ding/backup/dataset/haibo/lt_lidar_map/global_map.json"/>
+    <param name="map_pcd_path" type="string" value="/home/ding/backup/dataset/haibo/lt_lidar_map/original_map.pcd" />
+    <param name="final_map_path" type="string" value="/home/ding/backup/dataset/haibo/lt_lidar_map/map.pcd" />
+    <param name="optimized_pose_path" type="string" value="/home/ding/backup/dataset/haibo/out/01-02-manyloops/lt_lidar_map_central_aft_intersession_loops.txt" /> -->
+
+    <!-- <param name="bag_path" type="string" value="/disk3/0121.bag" />     -->
+    <!-- <param name="map_path" type="string" value="/home/mdc/sjtu/lt_lidar_map" />     -->
+    <!-- <param name="saved_json_path" type="string" value="/home/mdc/sjtu/lt_lidar_map/global_map.json"/> -->
+    <!-- <param name="map_pcd_path" type="string" value="/home/mdc/sjtu/lt_lidar_map/original_map.pcd" /> -->
+    <!-- <param name="final_map_path" type="string" value="/home/mdc/sjtu/lt_lidar_map/map.pcd" /> -->
+    
+    <!-- <param name="bag_path" type="string" value="/home/ding/backup/dataset/haibo/0118_2s95.bag" />
+    <param name="map_path" type="string" value="/home/ding/backup/dataset/haibo/02" />
+    <param name="saved_json_path" type="string" value="/home/ding/backup/dataset/haibo/02/global_map.json"/>
+    <param name="map_pcd_path" type="string" value="/home/ding/backup/dataset/haibo/02/original_map.pcd" />
+    <param name="final_map_path" type="string" value="/home/ding/backup/dataset/haibo/02/map.pcd" />
+    <param name="optimized_pose_path" type="string" value="/home/ding/backup/dataset/haibo/out/01-02-manyloops/02_central_aft_intersession_loops.txt" /> --> -->
+
+   
+    <param name="bag_path" type="string" value="/home/ding/backup/dataset/haibo/data/0313_2/0313b95.bag" />
+    <param name="map_path" type="string" value="/home/ding/backup/dataset/haibo/data/0313_2" />
+    <!-- <param name="saved_json_path" type="string" value="/home/ding/backup/dataset/haibo/data/0313/global_map.json"/>
+    <param name="map_pcd_path" type="string" value="/home/ding/backup/dataset/haibo/data/0313/original_map.pcd" />
+    <param name="final_map_path" type="string" value="/home/ding/backup/dataset/haibo/data/0313/map.pcd" /> -->
+    <param name="optimized_pose_path" type="string" value="/home/ding/backup/dataset/haibo/data/0313/out/01-02-manyloops/02_central_aft_intersession_loops.txt" /> -->
+
+    <param name="imu_topic" type="string" value="/imu_data"/>
+    <param name="lidar_topic" type="string" value="/lidar_aeb/raw_points"/>
+
+    <!--................The End...............-->
+    
+    <!--....................keyframe param....................-->
+    <param name="map_dist" type="double" value="7" />
+    <!-- <param name="map_dist" type="double" value="4" /> -->
+
+    <param name="submap_size" type="int" value="60" />
+
+    <param name="save_map" type="bool" value="1" />
+
+    <param name="update_map" type="bool" value="0" />
+
+    <!--................The Occupancy Grid Map Param...............-->
+
+    <param name="min_distance" type="double" value="8.0" />
+    <param name="max_distance" type="double" value="70.0" />
+    <param name="radius_filter_radius" type="double" value="0.6" />
+    <param name="radius_filter_count" type="int" value="8" />
+    <param name="get_map_origin_informaiton" type="bool" value="0" />
+
+    <node pkg="rtk_mapping" type="map" name="map" output="screen"/>
+
+    <arg name="rviz" default="true" />
+    <group if="$(arg rviz)">
+        <node launch-prefix="nice" pkg="rviz" type="rviz" name="rviz" args="-d $(find rtk_mapping)/rviz/mapping.rviz" />
+    </group>
+
+</launch>

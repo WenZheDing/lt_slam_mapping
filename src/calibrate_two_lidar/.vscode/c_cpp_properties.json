@@ -1,0 +1,27 @@
+{
+  "configurations": [
+    {
+      "browse": {
+        "databaseFilename": "",
+        "limitSymbolsToIncludedHeaders": true
+      },
+      "includePath": [
+        "/home/liyuhang/HaiboMapping_ws/devel/include/**",
+        "/home/liyuhang/localization_ws/devel/include/**",
+        "/opt/ros/melodic/include/**",
+        "/home/liyuhang/localization_ws/src/test/include/**",
+        "/home/liyuhang/HaiboMapping_ws/src/calibrate_two_lidar/include/**",
+        "/home/liyuhang/HaiboMapping_ws/src/ndt_cpu/include/**",
+        "/home/liyuhang/HaiboMapping_ws/src/ndt_omp-master/include/**",
+        "/home/liyuhang/HaiboMapping_ws/src/rtk_mapping/include/**",
+        "/home/liyuhang/localization_ws/src/velodyne-master/velodyne_driver/include/**",
+        "/home/liyuhang/localization_ws/src/velodyne-master/velodyne_laserscan/include/**",
+        "/home/liyuhang/localization_ws/src/velodyne-master/velodyne_pcl/include/**",
+        "/home/liyuhang/localization_ws/src/velodyne-master/velodyne_pointcloud/include/**",
+        "/usr/include/**"
+      ],
+      "name": "ROS"
+    }
+  ],
+  "version": 4
+}

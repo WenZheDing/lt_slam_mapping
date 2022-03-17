@@ -1,0 +1,56 @@
+<launch>
+    
+    <!--................The Occupancy Grid Map Param...............-->
+    <param name="thre_z_min" type="double" value="-1.3" />
+    <param name="thre_z_max" type="double" value="20.0" />
+    <param name="height_threshold" type="double" value="0.4" />
+    <param name="flag_pass_through" type="int" value="0" />
+    <param name="map_resolution" type="double" value="1" />
+
+    <param name="filter_radius" type="double" value="0.6" />
+    <param name="filter_count" type="int" value="8" />
+
+    <param name="count_threshold" type="int" value="7" />
+
+    <param name="max_window_size" type="int" value="10" />
+    <param name="slope" type="double" value="0.5" />
+    <param name="cell_size" type="double" value="0.5" />
+    <param name="initial_distance" type="double" value="0.1" />
+    <param name="max_distance" type="double" value="1.0" />
+
+    <!-- <param name="map_pcd_path" type="string" value="/home/ding/backup/dataset/haibo/lt_lidar_map/map.pcd" />
+    <param name="bag_path" type="string" value="/home/ding/backup/dataset/haibo/0119s95.bag" />
+    <param name="filtered_pcd_path" type="string" value="/home/ding/backup/dataset/haibo/lt_lidar_map/filtered_map.pcd" />
+    <param name="saved_json_path" type="string" value="/home/ding/backup/dataset/haibo/lt_lidar_map/global_map.json"/> -->
+
+    <!-- <param name="map_pcd_path" type="string" value="/home/mdc/sjtu/lt_lidar_map/map.pcd" /> -->
+    <!-- <param name="bag_path" type="string" value="/disk3/0121.bag" />     -->
+    <!-- <param name="filtered_pcd_path" type="string" value="/home/mdc/sjtu/lt_lidar_map/filtered_map.pcd" />     -->
+    <!-- <param name="saved_json_path" type="string" value="/home/mdc/sjtu/lt_lidar_map/global_map.json"/> -->
+
+    <!-- <param name="map_pcd_path" type="string" value="/home/ding/backup/dataset/haibo/02/map.pcd" />
+    <param name="bag_path" type="string" value="/home/ding/backup/dataset/haibo/0118_2s95.bag" />
+    <param name="filtered_pcd_path" type="string" value="/home/ding/backup/dataset/haibo/02/filtered_map.pcd" />
+    <param name="saved_json_path" type="string" value="/home/ding/backup/dataset/haibo/02/global_map.json"/> -->
+
+    <param name="bag_path" type="string" value="/home/ding/backup/dataset/haibo/data/0313_2/0313b95.bag" />
+    <param name="map_path" type="string" value="/home/ding/backup/dataset/haibo/data/0313_2" />
+    <!-- <param name="filtered_pcd_path" type="string" value="/home/ding/backup/dataset/haibo/data/0313/filtered_map.pcd" />
+    <param name="saved_json_path" type="string" value="/home/ding/backup/dataset/haibo/data/0313/global_map.json"/> -->
+
+    <param name="imu_topic" type="string" value="/imu_data"/>
+    <param name="get_map_origin_informaiton" type="bool" value="0" />
+
+    <!-- map inflation param -->
+    <param name="inflation_map_x" type="int" value="150"/>
+    <param name="inflation_map_y" type="int" value="150"/>
+
+    <param name="map_update" type="bool" value="0" />
+    <param name="visualize" type="bool" value="1" />
+
+
+    <param name="pre_json_path" type="string" value="/home/ding/backup/dataset/haibo/lt_lidar_map/pre_global_map.json"/>
+
+    <node pkg = "global_ogm" type = "global_ogm" name = "global_ogm" output = "screen"/>
+
+</launch>
