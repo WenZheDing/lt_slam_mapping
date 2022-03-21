@@ -70,6 +70,7 @@ int main(int argc, char **argv)
   bool transform_from_llh;
   std::string json_file_path;
   std::string json_file_path2;
+  std::string pcd_file_path;
 
   nh.getParam("point1_x", point1_x);
   nh.getParam("point1_y", point1_y);
@@ -78,17 +79,20 @@ int main(int argc, char **argv)
   nh.getParam("point1_lon", point1_lon);
   nh.getParam("json_file_path", json_file_path);
   nh.getParam("json_file_path2", json_file_path2);
+  nh.getParam("pcd_file_path", pcd_file_path);
 
   ros::Rate loop_rate(1.0);
   ros::Publisher occupancy_grid_pub = nh.advertise<nav_msgs::OccupancyGrid>("/ogm_json", 1);
   ros::Publisher occupancy_grid_pub2 = nh.advertise<nav_msgs::OccupancyGrid>("/ogm_json2", 1);
   ros::Publisher pubStart = nh.advertise<geometry_msgs::PoseStamped>("/goal", 1);
   ros::Publisher pubwaji = nh.advertise<geometry_msgs::PointStamped>("/waji", 1);
+  ros::Publisher pubMap = nh.advertise<sensor_msgs::PointCloud2>("/map", 2);
 
   nav_msgs::OccupancyGrid global_map;
   nav_msgs::OccupancyGrid global_map2;
   geometry_msgs::PoseStamped goal;
   geometry_msgs::PointStamped waji;
+  pcl::PointCloud<pcl::PointXYZI>::Ptr pcd_cloud(new pcl::PointCloud<pcl::PointXYZI>);
 
   Json::Reader json_reader;
   std::ifstream json_file;
@@ -104,10 +108,10 @@ int main(int argc, char **argv)
 
   int width, height, size;
   float resolution;
+  global_map.header.frame_id = "/map";
   global_map.info.width = root["width"].asInt();
   global_map.info.height = root["height"].asInt();
   global_map.info.resolution = root["resolution"].asFloat();
-  global_map.header.frame_id = "/map";
   global_map.info.origin.position.x = root["origin.x"].asDouble();
   global_map.info.origin.position.y = root["origin.y"].asDouble();
   global_map.info.origin.position.z = 0.0;
@@ -119,26 +123,26 @@ int main(int argc, char **argv)
   }
 
   //open map2
-  json_file2.open(json_file_path2);
+  // json_file2.open(json_file_path2);
 
-  if (!json_reader.parse(json_file2, root2))
-  {
-    std::cout << "Error opening json file : " << json_file_path2 << std::endl;
-  }
+  // if (!json_reader.parse(json_file2, root2))
+  // {
+  //   std::cout << "Error opening json file : " << json_file_path2 << std::endl;
+  // }
 
-  global_map2.info.width = root2["width"].asInt();
-  global_map2.info.height = root2["height"].asInt();
-  global_map2.info.resolution = root2["resolution"].asFloat();
-  global_map2.header.frame_id = "/map";
-  global_map2.info.origin.position.x = root2["origin.x"].asDouble();
-  global_map2.info.origin.position.y = root2["origin.y"].asDouble();
-  global_map2.info.origin.position.z = 0.0;
-  size = root2["data"].size();
+  // global_map2.info.width = root2["width"].asInt();
+  // global_map2.info.height = root2["height"].asInt();
+  // global_map2.info.resolution = root2["resolution"].asFloat();
+  // global_map2.header.frame_id = "/map";
+  // global_map2.info.origin.position.x = root2["origin.x"].asDouble();
+  // global_map2.info.origin.position.y = root2["origin.y"].asDouble();
+  // global_map2.info.origin.position.z = 0.0;
+  // size = root2["data"].size();
 
-  for (int i = 0; i < size; i++)
-  {
-    global_map2.data.push_back(root2["data"][i].asInt());
-  }
+  // for (int i = 0; i < size; i++)
+  // {
+  //   global_map2.data.push_back(root2["data"][i].asInt());
+  // }
 
   // Eigen::Quaterniond q_imu = Eigen::AngleAxisd(1.91166, Eigen::Vector3d::UnitZ()) *
   //                            Eigen::AngleAxisd(0, Eigen::Vector3d::UnitY()) *
@@ -152,6 +156,17 @@ int main(int argc, char **argv)
   // goal.pose.orientation.z = q_imu.z();
   // goal.pose.orientation.w = q_imu.w();
 
+  if (pcl::io::loadPCDFile<pcl::PointXYZI>(pcd_file_path, *pcd_cloud) == -1)
+  {
+    PCL_ERROR("Could not read file :  %s \n", pcd_file_path.c_str());
+    return 0;
+  }
+  sensor_msgs::PointCloud2 TargetCloud;
+  pcl::toROSMsg(*pcd_cloud, TargetCloud);
+  TargetCloud.header.stamp = ros::Time::now();
+  TargetCloud.header.frame_id = "/map";
+  pubMap.publish(TargetCloud);
+
   waji.header.frame_id = "/map";
   waji.header.stamp = ros::Time::now();
   if (!transform_from_llh)
@@ -162,13 +177,14 @@ int main(int argc, char **argv)
   else
   {
     transform_llh_to_xyz(point1_lon, point1_lat, 0, waji.point.x, waji.point.y, z);
-    std::cout << "x= " << waji.point.x <<"    "<< "y= " << waji.point.y << std::endl;
+    std::cout << "x= " << waji.point.x << "    "
+              << "y= " << waji.point.y << std::endl;
   }
 
   while (ros::ok())
   {
     occupancy_grid_pub.publish(global_map);
-    occupancy_grid_pub2.publish(global_map2);
+    // occupancy_grid_pub2.publish(global_map2);
     // pubStart.publish(goal);
     pubwaji.publish(waji);
 
