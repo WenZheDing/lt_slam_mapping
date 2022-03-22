@@ -63,9 +63,9 @@ public:
         map_pcd_path = map_path + "/map.pcd";
         filtered_pcd_path = map_path + "/filtered_map.pcd";
         saved_json_path = map_path + "/global_map.json";
+        transformed_pcd_path = map_path + "/transformed_map.pcd";
         // nh_.getParam("filtered_pcd_path", filtered_pcd_path);
         // nh_.getParam("saved_json_path", saved_json_path);
-
     }
     void create_ogm()
     {
@@ -80,6 +80,7 @@ public:
         }
         PointCloudFilter(thre_z_min, thre_z_max, flag_pass_through, pcd_cloud, filtered_cloud);
         pcl::io::savePCDFileASCII(filtered_pcd_path, *pcd_cloud);
+        pcl::io::savePCDFileASCII(transformed_pcd_path, *transform_origin(pcd_cloud));
         SetOccupancyGridMap(filtered_cloud, occupancy_grid_map, inflated_occupancy_grid_map, map_update);
         printf("occupancy grid map created ~~~ \n");
         printf("start creating json file .... \n");
@@ -246,16 +247,16 @@ public:
                 ogm_mat.at<uint8_t>(i, j) = occupancy_grid_map_data[index];
             }
         }
-        //if you want to visualize the mat ,please uncomment these
-        cv::imshow("原始图",ogm_mat);
-        cv::Mat erode_element = cv::getStructuringElement(cv::MORPH_RECT, cv::Size(2, 3));
-        // cv::Mat erode_element = cv::getStructuringElement(cv::MORPH_RECT, cv::Size(1, 1));
-        cv::erode(ogm_mat, ogm_mat, erode_element);
-        cv::imshow("腐蚀图",ogm_mat);
-        cv::Mat dilate_element = cv::getStructuringElement(cv::MORPH_ELLIPSE, cv::Size(2, 2));
-        cv::dilate(ogm_mat, ogm_mat, dilate_element);
         if (visualize)
         {
+            //if you want to visualize the mat ,please uncomment these
+            cv::imshow("原始图", ogm_mat);
+            cv::Mat erode_element = cv::getStructuringElement(cv::MORPH_RECT, cv::Size(2, 3));
+            // cv::Mat erode_element = cv::getStructuringElement(cv::MORPH_RECT, cv::Size(1, 1));
+            cv::erode(ogm_mat, ogm_mat, erode_element);
+            cv::imshow("腐蚀图", ogm_mat);
+            cv::Mat dilate_element = cv::getStructuringElement(cv::MORPH_ELLIPSE, cv::Size(2, 2));
+            cv::dilate(ogm_mat, ogm_mat, dilate_element);
             cv::namedWindow("膨胀图", CV_WINDOW_NORMAL);
             cv::imshow("膨胀图", ogm_mat);
             cv::waitKey(0);
@@ -340,8 +341,8 @@ public:
                 for (int j = 0; j < pre_saved_map.info.width; j++)
                 {
                     int index = j + i * pre_saved_map.info.width;
-                    if (pre_saved_map.info.origin.position.x + j >= inflated_origin_x && pre_saved_map.info.origin.position.x + j < inflated_origin_x + inflated_occupancy_grid_map_width -1 &&
-                        pre_saved_map.info.origin.position.y + i >= inflated_origin_y && pre_saved_map.info.origin.position.y + i < inflated_origin_y + inflated_occupancy_grid_map_height -1)
+                    if (pre_saved_map.info.origin.position.x + j >= inflated_origin_x && pre_saved_map.info.origin.position.x + j < inflated_origin_x + inflated_occupancy_grid_map_width - 1 &&
+                        pre_saved_map.info.origin.position.y + i >= inflated_origin_y && pre_saved_map.info.origin.position.y + i < inflated_origin_y + inflated_occupancy_grid_map_height - 1)
                     {
                         int new_index = int(j + pre_saved_map.info.origin.position.x - inflated_origin_x) + int(i + pre_saved_map.info.origin.position.y - inflated_origin_y) * inflated_occupancy_grid_map_width;
                         // std::cout << "mapy : " << i + pre_saved_map.info.origin.position.y - inflated_origin_y << std::endl;
@@ -369,7 +370,7 @@ public:
                     for (int j = 0; j < inflated_msg.info.width; j++)
                     {
                         int index = j + i * inflated_msg.info.width;
-                        pre_mat.at<uint8_t>(i, j) =  inflated_msg.data[index];
+                        pre_mat.at<uint8_t>(i, j) = inflated_msg.data[index];
                     }
                 }
                 cv::namedWindow("上一次地图", CV_WINDOW_NORMAL);
@@ -484,6 +485,30 @@ public:
         return;
     }
 
+    pcl::PointCloud<pcl::PointXYZI>::Ptr transform_origin(pcl::PointCloud<pcl::PointXYZI>::Ptr cloud_in)
+    {
+        pcl::PointCloud<pcl::PointXYZI>::Ptr cloud_out(new pcl::PointCloud<pcl::PointXYZI>());
+        cloud_out->resize(cloud_in->points.size());
+
+        for (uint32_t i = 0; i < cloud_in->points.size(); i++)
+        {
+            Eigen::Vector3d point(cloud_in->points[i].x, cloud_in->points[i].y, cloud_in->points[i].z);
+
+            pcl::PointXYZI p;
+            p.x = point[0] + origin_x_in_world;
+            p.y = point[1] + origin_y_in_world;
+            p.z = point[2] + origin_z_in_world;
+            p.intensity = cloud_in->points[i].intensity;
+
+            cloud_out->points[i] = p;
+        }
+
+        cloud_out->height = 1;
+        cloud_out->width = cloud_in->points.size();
+
+        return cloud_out;
+    }
+
 private:
     ros::NodeHandle nh_;
 
@@ -492,6 +517,7 @@ private:
     std::string bag_path;
     std::string imu_topic;
     std::string filtered_pcd_path;
+    std::string transformed_pcd_path;
     std::string pre_json_path;
     bool map_update;
     bool visualize;

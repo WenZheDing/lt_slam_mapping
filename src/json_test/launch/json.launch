@@ -1,8 +1,8 @@
 <launch>
     
 
-    <arg name="arg_json_file_path" default="/home/ding/backup/dataset/haibo/data/0313_1/global_map.json"/>
-    <arg name="arg_pcd_file_path" default="/home/ding/backup/dataset/haibo/data/0313_1/map.pcd"/>
+    <arg name="arg_json_file_path" default="/home/ding/backup/dataset/haibo/data/0313_2/global_map.json"/>
+    <arg name="arg_pcd_file_path" default="/home/ding/backup/dataset/haibo/data/0313_2/transformed_map.pcd"/>
     <arg name="arg_point1_lat"  default="31.1377397" />
     <arg name="arg_point1_lon"  default="118.1788036" />
 

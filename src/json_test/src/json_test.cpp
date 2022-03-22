@@ -94,11 +94,23 @@ int main(int argc, char **argv)
   geometry_msgs::PointStamped waji;
   pcl::PointCloud<pcl::PointXYZI>::Ptr pcd_cloud(new pcl::PointCloud<pcl::PointXYZI>);
 
+
   Json::Reader json_reader;
   std::ifstream json_file;
   std::ifstream json_file2;
   Json::Value root;
   Json::Value root2;
+
+  if (pcl::io::loadPCDFile<pcl::PointXYZI>(pcd_file_path, *pcd_cloud) == -1)
+  {
+    PCL_ERROR("Could not read file :  %s \n", pcd_file_path.c_str());
+    return 0;
+  }
+  sensor_msgs::PointCloud2 TargetCloud;
+  pcl::toROSMsg(*pcd_cloud, TargetCloud);
+  TargetCloud.header.stamp = ros::Time::now();
+  TargetCloud.header.frame_id = "/map";
+
   json_file.open(json_file_path);
 
   if (!json_reader.parse(json_file, root))
@@ -112,6 +124,8 @@ int main(int argc, char **argv)
   global_map.info.width = root["width"].asInt();
   global_map.info.height = root["height"].asInt();
   global_map.info.resolution = root["resolution"].asFloat();
+  // global_map.info.origin.position.x = root["origin.x"].asDouble();
+  // global_map.info.origin.position.y = root["origin.y"].asDouble();
   global_map.info.origin.position.x = root["origin.x"].asDouble();
   global_map.info.origin.position.y = root["origin.y"].asDouble();
   global_map.info.origin.position.z = 0.0;
@@ -156,17 +170,6 @@ int main(int argc, char **argv)
   // goal.pose.orientation.z = q_imu.z();
   // goal.pose.orientation.w = q_imu.w();
 
-  if (pcl::io::loadPCDFile<pcl::PointXYZI>(pcd_file_path, *pcd_cloud) == -1)
-  {
-    PCL_ERROR("Could not read file :  %s \n", pcd_file_path.c_str());
-    return 0;
-  }
-  sensor_msgs::PointCloud2 TargetCloud;
-  pcl::toROSMsg(*pcd_cloud, TargetCloud);
-  TargetCloud.header.stamp = ros::Time::now();
-  TargetCloud.header.frame_id = "/map";
-  pubMap.publish(TargetCloud);
-
   waji.header.frame_id = "/map";
   waji.header.stamp = ros::Time::now();
   if (!transform_from_llh)
@@ -187,6 +190,7 @@ int main(int argc, char **argv)
     // occupancy_grid_pub2.publish(global_map2);
     // pubStart.publish(goal);
     pubwaji.publish(waji);
+    pubMap.publish(TargetCloud);
 
     loop_rate.sleep();
 

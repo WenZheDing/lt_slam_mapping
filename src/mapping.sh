@@ -1,6 +1,6 @@
 Y="\\033[33m"
 
-root_dir="/home/ding/backup/code/haibo_lt_mapping"
+root_dir=$(pwd)"/.."
 child_dir=$(date +%y%m%d)
 bag_name="test.bag"
 lidar_topic="/lidar_aeb/raw_points"

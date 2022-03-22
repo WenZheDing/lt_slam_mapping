@@ -38,8 +38,8 @@
     <!-- <param name="filtered_pcd_path" type="string" value="/home/ding/backup/dataset/haibo/data/0313/filtered_map.pcd" />
     <param name="saved_json_path" type="string" value="/home/ding/backup/dataset/haibo/data/0313/global_map.json"/> -->
 
-    <arg name="arg_bag_path" default="/home/ding/backup/dataset/haibo/data/0301/110_0307.bag"/>
-    <arg name="arg_map_path" default="/home/ding/backup/dataset/haibo/data/0301/110"/>
+    <arg name="arg_bag_path" default="/home/ding/backup/dataset/haibo/data/0313_2/0313b95.bag"/>
+    <arg name="arg_map_path" default="/home/ding/backup/dataset/haibo/data/0313_2"/>
     <param name="bag_path" type="string" value="$(arg arg_bag_path)" />
     <param name="map_path" type="string" value="$(arg arg_map_path)" />
     <!-- <param name="bag_path" type="string" value="/home/ding/backup/dataset/haibo/data/0301/110_0307.bag" />
