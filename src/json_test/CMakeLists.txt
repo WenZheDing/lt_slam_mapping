@@ -217,6 +217,9 @@ include_directories(
 
 
 add_executable(json_test src/json_test.cpp)
-target_link_libraries(json_test ${catkin_LIBRARIES} ${PCL_LIBRARIES}   )
+target_link_libraries(json_test ${catkin_LIBRARIES} ${PCL_LIBRARIES})
+
+add_executable(local_map_merge src/local_map_merge.cpp)
+target_link_libraries(local_map_merge ${catkin_LIBRARIES} ${PCL_LIBRARIES})
 
 

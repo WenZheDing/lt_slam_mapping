@@ -124,8 +124,6 @@ int main(int argc, char **argv)
   global_map.info.width = root["width"].asInt();
   global_map.info.height = root["height"].asInt();
   global_map.info.resolution = root["resolution"].asFloat();
-  // global_map.info.origin.position.x = root["origin.x"].asDouble();
-  // global_map.info.origin.position.y = root["origin.y"].asDouble();
   global_map.info.origin.position.x = root["origin.x"].asDouble();
   global_map.info.origin.position.y = root["origin.y"].asDouble();
   global_map.info.origin.position.z = 0.0;
