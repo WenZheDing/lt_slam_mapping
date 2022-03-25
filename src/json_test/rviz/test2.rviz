@@ -6,11 +6,15 @@ Panels:
       Expanded:
         - /Global Options1
         - /Status1
+        - /Grid1
+        - /Map1
         - /PointCloud21
         - /Axes1
         - /Axes2
         - /PointStamped1
         - /PointStamped2
+        - /PointCloud22
+        - /Polygon1
       Splitter Ratio: 0.5
     Tree Height: 728
   - Class: rviz/Selection
@@ -54,19 +58,19 @@ Visualization Manager:
         Y: 0
         Z: 0
       Plane: XY
-      Plane Cell Count: 10
+      Plane Cell Count: 2000
       Reference Frame: <Fixed Frame>
       Value: true
     - Alpha: 0.699999988079071
       Class: rviz/Map
       Color Scheme: map
       Draw Behind: false
-      Enabled: true
+      Enabled: false
       Name: Map
       Topic: /ogm_json
       Unreliable: false
       Use Timestamp: false
-      Value: true
+      Value: false
     - Alpha: 0.699999988079071
       Class: rviz/Map
       Color Scheme: map
@@ -102,7 +106,7 @@ Visualization Manager:
       Enabled: false
       Invert Rainbow: false
       Max Color: 255; 255; 255
-      Max Intensity: 138
+      Max Intensity: 110
       Min Color: 0; 0; 0
       Min Intensity: 2
       Name: PointCloud2
@@ -126,9 +130,9 @@ Visualization Manager:
       Value: true
     - Class: rviz/Axes
       Enabled: true
-      Length: 10
+      Length: 2
       Name: Axes
-      Radius: 2
+      Radius: 0.20000000298023224
       Reference Frame: base
       Value: true
     - Alpha: 1
@@ -149,6 +153,44 @@ Visualization Manager:
       Name: PointStamped
       Radius: 10
       Topic: /global_origin
+      Unreliable: false
+      Value: true
+    - Alpha: 1
+      Autocompute Intensity Bounds: true
+      Autocompute Value Bounds:
+        Max Value: 10
+        Min Value: -10
+        Value: true
+      Axis: Z
+      Channel Name: intensity
+      Class: rviz/PointCloud2
+      Color: 255; 255; 255
+      Color Transformer: Intensity
+      Decay Time: 0
+      Enabled: false
+      Invert Rainbow: false
+      Max Color: 255; 255; 255
+      Max Intensity: 110
+      Min Color: 0; 0; 0
+      Min Intensity: 2
+      Name: PointCloud2
+      Position Transformer: XYZ
+      Queue Size: 10
+      Selectable: true
+      Size (Pixels): 3
+      Size (m): 0.20000000298023224
+      Style: Flat Squares
+      Topic: /filteredcloud
+      Unreliable: false
+      Use Fixed Frame: true
+      Use rainbow: true
+      Value: false
+    - Alpha: 1
+      Class: rviz/Polygon
+      Color: 25; 255; 0
+      Enabled: true
+      Name: Polygon
+      Topic: /empty_polygon
       Unreliable: false
       Value: true
   Enabled: true
@@ -179,25 +221,25 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 797.4864501953125
+      Distance: 45.819732666015625
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: 22.46930694580078
-        Y: 175.5694580078125
-        Z: -118.00914001464844
+        X: 665.43798828125
+        Y: 211.8828887939453
+        Z: 3.7054505348205566
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 1.4547959566116333
+      Pitch: 1.0997968912124634
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 1.620403528213501
+      Yaw: 1.9385912418365479
     Saved: ~
 Window Geometry:
   Displays:

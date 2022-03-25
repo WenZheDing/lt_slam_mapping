@@ -13,11 +13,14 @@
 
 #include <nav_msgs/OccupancyGrid.h>
 #include <nav_msgs/GetMap.h>
+#include <geometry_msgs/PolygonStamped.h>
 
 #include <sensor_msgs/PointCloud2.h>
 #include <sensor_msgs/Imu.h>
 #include <pcl/io/pcd_io.h>
 #include <pcl_conversions/pcl_conversions.h>
+#include <pcl/filters/passthrough.h>
+#include <thread>
 
 #include <pcl/point_types.h>
 #include <json/json.h>
@@ -40,6 +43,7 @@ nav_msgs::OccupancyGrid o_local_map_;
 MapManagerDataType::Imu o_imu_msg_;
 float global_map_heading;
 pcl::PointCloud<pcl::PointXYZI>::Ptr pLaserCloud;
+pcl::PointCloud<pcl::PointXYZI>::Ptr FilteredCloud;
 geometry_msgs::PointStamped local_origin;
 
 // ogm 参数
@@ -47,6 +51,7 @@ double d_width1, d_width2;
 double d_height1, d_height2;
 double d_z1, d_z2;
 double d_ego_left, d_ego_right, d_ego_front, d_ego_back, d_ego_top, d_ego_bottom;
+double d_ego_empty_left, d_ego_empty_right, d_ego_empty_front, d_ego_empty_back;
 double d_resolution;
 double d_height_diff;
 // mapping中的障碍物检测参数;
@@ -135,8 +140,14 @@ void CreateLocalMap()
         auto point = pLaserCloud->points[i];
         // auto point = o_transform_matrix_lidar_front_right * p;
         // auto point = g_lidarPointsMsg[i];
+        // 清除自车位置
         if (point.x < d_ego_front && point.x > d_ego_back && point.y < d_ego_left &&
             point.y > d_ego_right && point.z < d_ego_top && point.z > d_ego_bottom)
+        {
+            continue;
+        }
+        //清除车辆周围和前方的矩形区域内的点云
+        if (point.x < d_ego_empty_front && point.x > d_ego_empty_back && point.y < d_ego_empty_left && point.y > d_ego_empty_right)
         {
             continue;
         }
@@ -167,6 +178,15 @@ void CreateLocalMap()
                 classify_max[y][x].push_back(point.z);
             }
         }
+        pcl::PassThrough<pcl::PointXYZI> pass;
+        pass.setInputCloud(pLaserCloud);
+        pass.setFilterFieldName("x");
+        pass.setFilterLimits(d_width1 + 1, d_width2 - 1);
+        pass.setFilterFieldName("y");
+        pass.setFilterLimits(d_ego_left, d_ego_right);
+        pass.setFilterFieldName("z");
+        pass.setFilterLimits(d_z1, d_z2);
+        pass.filter(*FilteredCloud);
     }
     o_local_map_.header.frame_id = "base";
     o_local_map_.header.stamp = ros::Time::now();
@@ -244,10 +264,29 @@ void UpdateGloballMap()
             }
             else
             {
-                o_global_map_.data[local_y_in_global * o_global_map_.info.width + local_x_in_global] =
-                    o_global_map_.data[local_y_in_global * o_global_map_.info.width + local_x_in_global] > o_local_map_.data[i * cols + j] ? o_global_map_.data[local_y_in_global * o_global_map_.info.width + local_x_in_global] : o_local_map_.data[i * cols + j];
+                // o_global_map_.data[local_y_in_global * o_global_map_.info.width + local_x_in_global] =
+                //     o_global_map_.data[local_y_in_global * o_global_map_.info.width + local_x_in_global] > o_local_map_.data[i * cols + j] ? o_global_map_.data[local_y_in_global * o_global_map_.info.width + local_x_in_global] : o_local_map_.data[i * cols + j];
+                // 这里不存在误差放大，因为会通过类似取余的操作来反推出y和x，把取整操作放在下面会导致x不准
+                o_global_map_.data[local_y_in_global * o_global_map_.info.width + local_x_in_global] = o_local_map_.data[i * cols + j];
             }
         }
+    }
+}
+
+void publishTfFcn()
+{
+    ros::Rate loopRate(100);
+    Eigen::AngleAxisf o_rotation_vector((-o_imu_msg_.AngleHeading) / 180 * M_PI, Eigen::Vector3f(0, 0, 1));
+    Eigen::Quaternionf o_quat(o_rotation_vector);
+    while (ros::ok())
+    {
+        tf::TransformBroadcaster broadcaster;
+        broadcaster.sendTransform(
+            tf::StampedTransform(
+                tf::Transform(tf::Quaternion(o_quat.x(), o_quat.y(), o_quat.z(), o_quat.w()), tf::Vector3(o_imu_msg_.x, o_imu_msg_.y, o_imu_msg_.z)),
+                ros::Time::now(), "map", "base"));
+
+        loopRate.sleep();
     }
 }
 
@@ -266,7 +305,9 @@ int main(int argc, char **argv)
     bool lidar_init;
     int bag_param;
     sensor_msgs::PointCloud2 TargetCloud;
+    sensor_msgs::PointCloud2 TargetCloud2;
     geometry_msgs::PointStamped global_origin;
+    geometry_msgs::PolygonStamped empty_polygon;
 
     nh.getParam("global_map_path", global_map_path);
     nh.getParam("config_path", config_path);
@@ -276,15 +317,16 @@ int main(int argc, char **argv)
     nh.getParam("min_distance", min_distance);
     nh.getParam("max_distance", max_distance);
     nh.getParam("bag_param", bag_param);
-    
 
-    ros::Rate loop_rate(100);
+    ros::Rate loop_rate(1);
     ros::Publisher occupancy_grid_pub = nh.advertise<nav_msgs::OccupancyGrid>("/ogm_json", 1);
     ros::Publisher merged_grid_pub = nh.advertise<nav_msgs::OccupancyGrid>("/merged_map", 2);
     ros::Publisher local_grid_pub = nh.advertise<nav_msgs::OccupancyGrid>("/local_map", 2);
     ros::Publisher pointcloud_pub = nh.advertise<sensor_msgs::PointCloud2>("/pointcloud", 2);
+    ros::Publisher filteredcloud_pub = nh.advertise<sensor_msgs::PointCloud2>("/filteredcloud", 2);
     ros::Publisher global_pub = nh.advertise<geometry_msgs::PointStamped>("/global_origin", 1);
     ros::Publisher local_pub = nh.advertise<geometry_msgs::PointStamped>("/local_origin", 1);
+    ros::Publisher empty_polygon_pub = nh.advertise<geometry_msgs::PolygonStamped>("/empty_polygon", 1, true);
 
     nav_msgs::OccupancyGrid global_map;
 
@@ -295,6 +337,7 @@ int main(int argc, char **argv)
     imu_init = false;
     lidar_init = false;
     pLaserCloud.reset(new pcl::PointCloud<pcl::PointXYZI>());
+    FilteredCloud.reset(new pcl::PointCloud<pcl::PointXYZI>());
 
     json_file.open(global_map_path);
 
@@ -349,6 +392,10 @@ int main(int argc, char **argv)
     i_max_thresh = o_root["i_classify_max_thresh"].asInt();
     i_mid_thresh = o_root["i_classify_mid_thresh"].asInt();
     i_min_thresh = o_root["i_classify_min_thresh"].asInt();
+    d_ego_empty_left = o_root["d_ego_empty_left"].asDouble();
+    d_ego_empty_right = o_root["d_ego_empty_right"].asDouble();
+    d_ego_empty_front = o_root["d_ego_empty_front"].asDouble();
+    d_ego_empty_back = o_root["d_ego_empty_back"].asDouble();
 
     for (int i = 0; i < size; i++)
     {
@@ -364,7 +411,7 @@ int main(int argc, char **argv)
     topics.push_back(std::string(imu_topic));
     rosbag::View view(bag, rosbag::TopicQuery(topics));
     rosbag::View::iterator it = view.begin();
-    std::advance(it,bag_param);
+    std::advance(it, bag_param);
     // 按绝对的时间顺序读取
     for (; it != view.end(); ++it)
     {
@@ -398,6 +445,9 @@ int main(int argc, char **argv)
             TargetCloud.header.frame_id = "base";
             CreateLocalMap();
             UpdateGloballMap();
+            pcl::toROSMsg(*FilteredCloud, TargetCloud2);
+            TargetCloud2.header.stamp = ros::Time::now();
+            TargetCloud2.header.frame_id = "base";
             break;
         }
     }
@@ -407,26 +457,45 @@ int main(int argc, char **argv)
     global_origin.point.x = global_map.info.origin.position.x;
     global_origin.point.y = global_map.info.origin.position.y;
 
+    empty_polygon.header.frame_id = "base";
+    geometry_msgs::Point32 A;
+    geometry_msgs::Point32 B;
+    geometry_msgs::Point32 C;
+    geometry_msgs::Point32 D;
+    A.y = d_ego_empty_left;
+    A.x = d_ego_empty_front;
+    B.y = d_ego_empty_right;
+    B.x = d_ego_empty_front;
+    C.y = d_ego_empty_right;
+    C.x = d_ego_empty_back;
+    D.y = d_ego_empty_left;
+    D.x = d_ego_empty_back;
+
+    empty_polygon.polygon.points.push_back(A);
+    empty_polygon.polygon.points.push_back(B);
+    empty_polygon.polygon.points.push_back(C);
+    empty_polygon.polygon.points.push_back(D);
+
+    std::thread publishTf(publishTfFcn);
+    publishTf.detach();
+
     while (ros::ok())
     {
-        tf::TransformBroadcaster broadcaster;
-        Eigen::AngleAxisf o_rotation_vector((-o_imu_msg_.AngleHeading) / 180 * M_PI, Eigen::Vector3f(0, 0, 1));
-        Eigen::Quaternionf o_quat(o_rotation_vector);
         o_global_map_.header.stamp = ros::Time::now();
         global_map.header.stamp = ros::Time::now();
         TargetCloud.header.stamp = ros::Time::now();
+        TargetCloud2.header.stamp = ros::Time::now();
         o_local_map_.header.stamp = ros::Time::now();
-        broadcaster.sendTransform(
-            tf::StampedTransform(
-                tf::Transform(tf::Quaternion(o_quat.x(), o_quat.y(), o_quat.z(), o_quat.w()), tf::Vector3(o_imu_msg_.x, o_imu_msg_.y, o_imu_msg_.z)),
-                ros::Time::now(), "map", "base"));
+        empty_polygon.header.stamp = ros::Time::now();
 
         occupancy_grid_pub.publish(global_map);
         merged_grid_pub.publish(o_global_map_);
         pointcloud_pub.publish(TargetCloud);
+        filteredcloud_pub.publish(TargetCloud2);
         local_grid_pub.publish(o_local_map_);
         global_pub.publish(global_origin);
         local_pub.publish(local_origin);
+        empty_polygon_pub.publish(empty_polygon);
 
         loop_rate.sleep();
         ros::spinOnce();

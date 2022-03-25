@@ -2,7 +2,7 @@
     
     <param name="global_map_path" type="string" value="/home/ding/backup/dataset/haibo/data/0301/110/global_map.json" />
     <param name="config_path" type="string" value="/home/ding/backup/code/haibo_lt_mapping/src/json_test/json/mapping.json" />
-    <param name="bag_path" type="string" value="/home/ding/backup/dataset/haibo/data/zsq/0324_110_1.bag" />
+    <param name="bag_path" type="string" value="/home/ding/backup/dataset/haibo/data/zsq/0324_110_4.bag" />
     <param name="imu_topic" type="string" value="/imu_data"/>
     <param name="lidar_topic" type="string" value="/lidar_aeb/raw_points"/>
     <param name="min_distance" type="double" value="8.0" />
