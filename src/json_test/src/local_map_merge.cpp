@@ -52,12 +52,14 @@ double d_height1, d_height2;
 double d_z1, d_z2;
 double d_ego_left, d_ego_right, d_ego_front, d_ego_back, d_ego_top, d_ego_bottom;
 double d_ego_empty_left, d_ego_empty_right, d_ego_empty_front, d_ego_empty_back;
+double d_park_height;
 double d_resolution;
 double d_height_diff;
 // mapping中的障碍物检测参数;
 int i_max_thresh;
 int i_mid_thresh;
 int i_min_thresh;
+int i_classify_park_thresh;
 
 void transform_llh_to_xyz(const double longitude, const double latitude, const double altitude, float &origin_x, float &origin_y, float &origin_z)
 {
@@ -119,7 +121,7 @@ void CreateLocalMap()
     int cols = (d_width2 - d_width1) / d_resolution;
     std::vector<std::vector<float>> maxheight(rows);
     std::vector<std::vector<float>> minheight(rows);
-    std::vector<std::vector<std::vector<float>>> classify_max(rows), classify_min(rows), classify_mid(rows);
+    std::vector<std::vector<std::vector<float>>> classify_max(rows), classify_min(rows), classify_mid(rows), classify_park(rows);
     for (int i = 0; i < rows; i++)
     {
         maxheight[i].resize(cols);
@@ -127,6 +129,7 @@ void CreateLocalMap()
         classify_max[i].resize(cols);
         classify_min[i].resize(cols);
         classify_mid[i].resize(cols);
+        classify_park[i].resize(cols);
         for (int j = 0; j < cols; j++)
         {
             maxheight[i][j] = MIN_OGM;
@@ -163,6 +166,11 @@ void CreateLocalMap()
             if (point.z < minheight[y][x])
             {
                 minheight[y][x] = point.z;
+            }
+            // 高于一定高度的都认为障碍物
+            if (point.z >= d_park_height)
+            {
+                classify_park[y][x].push_back(point.z);
             }
             // 对范围内的点进行高度上的分类，若三段高度内都有点，认为是人形或车型障碍物;
             if (point.z >= d_z1 && point.z < (2 * d_z1 + d_z2) / 3.0)
@@ -206,8 +214,14 @@ void CreateLocalMap()
             if ((maxheight[i][j] > minheight[i][j]) && (maxheight[i][j] - minheight[i][j] > d_height_diff))
             {
                 // map.data[index] = int((maxheight[i][j] - minheight[i][j]) * 100);
+                // 不是0，其他值对碰撞检测都一样
                 o_local_map_.data[index] = 50;
                 // std::cout << "+";
+            }
+            if (classify_park[i][j].size() >= i_classify_park_thresh)
+            {
+                o_local_map_.data[index] = 100;
+                std::cout << "park is " << classify_park[i][j].size() << std::endl;
             }
             // else
             // {
@@ -392,10 +406,12 @@ int main(int argc, char **argv)
     i_max_thresh = o_root["i_classify_max_thresh"].asInt();
     i_mid_thresh = o_root["i_classify_mid_thresh"].asInt();
     i_min_thresh = o_root["i_classify_min_thresh"].asInt();
+    i_classify_park_thresh = o_root["i_classify_park_thresh"].asInt();
     d_ego_empty_left = o_root["d_ego_empty_left"].asDouble();
     d_ego_empty_right = o_root["d_ego_empty_right"].asDouble();
     d_ego_empty_front = o_root["d_ego_empty_front"].asDouble();
     d_ego_empty_back = o_root["d_ego_empty_back"].asDouble();
+    d_park_height = o_root["d_park_height"].asDouble();
 
     for (int i = 0; i < size; i++)
     {
