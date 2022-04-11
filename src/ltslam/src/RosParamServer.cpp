@@ -21,7 +21,8 @@ RosParamServer::RosParamServer()
     nh.param<int>("ltslam/kNumRSLoopsUpperBound", kNumRSLoopsUpperBound, 10);
 
     nh.param<float>("ltslam/RSLoopsThreshold", RSLoopsThreshold, 10.0);
-    nh.param<float>("ltslam/loopFitnessScoreThreshold", loopFitnessScoreThreshold, 0.5);
+    nh.param<float>("ltslam/SCloopFitnessScoreThreshold", SCloopFitnessScoreThreshold, 0.5);
+    nh.param<float>("ltslam/RSloopFitnessScoreThreshold", RSloopFitnessScoreThreshold, 0.5);
 
     usleep(100);
 } // ctor RosParamServer

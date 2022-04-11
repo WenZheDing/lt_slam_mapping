@@ -19,7 +19,7 @@ void LTslam::writeAllSessionsTrajectories(std::string _postfix = "")
     {
 
         int curr_node_idx = int(key_value.key); // typedef std::uint64_t Key
-
+        // std::cout << "key =   " << curr_node_idx << std::endl;
         std::vector<int> parsed_digits;
         collect_digits(parsed_digits, curr_node_idx);
         int session_idx = parsed_digits.at(0);
@@ -55,7 +55,7 @@ void LTslam::writeAllSessionsTrajectories(std::string _postfix = "")
         int session_idx = _session_info.first;
 
         // local 是在各自的坐标系下
-        // central 是在全局坐标系（即central_sess_name 的坐标系）下
+        // central 是在全局坐标系（即 central_sess_name 的坐标系）下
         std::string filename_local = save_directory_ + session_names[session_idx] + "_local_" + _postfix + ".txt";
         std::string filename_central = save_directory_ + session_names[session_idx] + "_central_" + _postfix + ".txt";
         cout << filename_central << endl;
@@ -77,7 +77,8 @@ void LTslam::writeAllSessionsTrajectories(std::string _postfix = "")
 
 //图优化原点？
 LTslam::LTslam()
-    : poseOrigin(gtsam::Pose3(gtsam::Rot3::RzRyRx(0.0, 0.0, 0.0), gtsam::Point3(0.0, 0.0, 0.0)))
+    : poseOrigin(gtsam::Pose3(gtsam::Rot3::RzRyRx(0.0, 0.0, 0.0), gtsam::Point3(0.0, 0.0, 0.0))),
+      rtkPose(gtsam::Pose3(Rot3(Eigen::Quaterniond(-0.00147915, -0.00955925, 0.303899, 0.952655)), Point3(Eigen::Vector3d(10.0, -260.0, -3.00))))
 {
 } // ctor
 
@@ -144,6 +145,11 @@ void LTslam::initNoiseConstants()
         // Vector6 << 1e-4, 1e-4, 1e-4, 1e-3, 1e-3, 1e-3;
         largeNoise = noiseModel::Diagonal::Variances(Vector6);
     }
+    {
+        gtsam::Vector Vector6(6);
+        Vector6 << 100, 100, 100, 100, 100, 100;
+        rtkNoise = noiseModel::Diagonal::Variances(Vector6);
+    }
 
     float robustNoiseScore = 0.5; // constant is ok...
     gtsam::Vector robustNoiseVector6(6);
@@ -180,13 +186,7 @@ void LTslam::optimizeMultisesseionGraph(bool _toOpt)
     isamCurrentEstimate = isam->calculateEstimate();
     testpose = isamCurrentEstimate.at<gtsam::Pose3>(genAnchorNodeIdx(source_sess_idx));
     cout << "testposeinitial:  " << testpose.translation().x() << " " << testpose.translation().y() << " " << testpose.translation().z() << endl;
-    updateisam(7);
-
-    //isam没清空，分别优化三次
-    gtSAMgraph.resize(0);
-    initialEstimate.clear();
-
-    updateSessionsPoses();
+    updateisam(10);
 
     if (is_display_debug_msgs_)
     {
@@ -195,9 +195,16 @@ void LTslam::optimizeMultisesseionGraph(bool _toOpt)
         std::cout << std::endl;
         isamCurrentEstimate.print("Current estimate: ");
         std::cout << std::endl;
-        // std::ofstream os("/home/user/Documents/catkin2021/catkin_ltmapper/catkin_ltmapper_dev/src/ltmapper/data/3d/kaist/PoseGraphExample.dot");
-        // gtSAMgraph.saveGraph(os, isamCurrentEstimate);
+        std::ofstream os("/home/ding/backup/dataset/haibo/out/01-02-manyloops/PoseGraphTest" + std::to_string(time(NULL)) + ".dot");
+        gtSAMgraph.saveGraph(os, isamCurrentEstimate);
     }
+
+    //isam没清空，分别优化三次
+    gtSAMgraph.resize(0);
+    initialEstimate.clear();
+
+    updateSessionsPoses();
+
 } // optimizeMultisesseionGraph
 
 void LTslam::updateisam(const int num)
@@ -207,7 +214,8 @@ void LTslam::updateisam(const int num)
         isam->update();
         isamCurrentEstimate = isam->calculateEstimate();
         testpose = isamCurrentEstimate.at<gtsam::Pose3>(genAnchorNodeIdx(source_sess_idx));
-        cout << "testpose" << i << ":   " <<testpose.translation().x() << " " << testpose.translation().y() << " " << testpose.translation().z() << endl;
+        cout << "testpose" << i << ":   " << testpose.translation().x() << " " << testpose.translation().y() << " " << testpose.translation().z() << endl;
+        cout << "testrotate" << i << ":   " << testpose.rotation().roll() << " " << testpose.rotation().pitch() << " " << testpose.rotation().yaw() << endl;
     }
 }
 
@@ -231,7 +239,7 @@ std::optional<gtsam::Pose3> LTslam::doICPVirtualRelative( // for SC loop
 
     // ICP Settings
     pcl::IterativeClosestPoint<PointType, PointType> icp;
-    icp.setMaxCorrespondenceDistance(150); // giseop , use a value can cover 2*historyKeyframeSearchNum range in meter
+    icp.setMaxCorrespondenceDistance(400); // giseop , use a value can cover 2*historyKeyframeSearchNum range in meter
     icp.setMaximumIterations(100);
     icp.setTransformationEpsilon(1e-6);
     icp.setEuclideanFitnessEpsilon(1e-6);
@@ -246,17 +254,17 @@ std::optional<gtsam::Pose3> LTslam::doICPVirtualRelative( // for SC loop
     // giseop
     // TODO icp align with initial
 
-    if (icp.hasConverged() == false || icp.getFitnessScore() > loopFitnessScoreThreshold)
+    if (icp.hasConverged() == false || icp.getFitnessScore() > SCloopFitnessScoreThreshold)
     {
         mtx.lock();
-        std::cout << "  [SC loop] ICP fitness test failed (" << icp.getFitnessScore() << " > " << loopFitnessScoreThreshold << "). Reject this SC loop." << std::endl;
+        std::cout << "  [SC loop] ICP fitness test failed (" << icp.getFitnessScore() << " > " << SCloopFitnessScoreThreshold << "). Reject this SC loop." << std::endl;
         mtx.unlock();
         return std::nullopt;
     }
     else
     {
         mtx.lock();
-        std::cout << "  [SC loop] ICP fitness test passed (" << icp.getFitnessScore() << " < " << loopFitnessScoreThreshold << "). Add this SC loop." << std::endl;
+        std::cout << "  [SC loop] ICP fitness test passed (" << icp.getFitnessScore() << " < " << SCloopFitnessScoreThreshold << "). Add this SC loop." << std::endl;
         mtx.unlock();
     }
 
@@ -304,17 +312,19 @@ std::optional<gtsam::Pose3> LTslam::doICPGlobalRelative( // For RS loop
     // giseop
     // TODO icp align with initial
 
-    if (icp.hasConverged() == false || icp.getFitnessScore() > loopFitnessScoreThreshold)
+    if (icp.hasConverged() == false || icp.getFitnessScore() > RSloopFitnessScoreThreshold)
     {
         mtx.lock();
-        std::cout << "  [RS loop] ICP fitness test failed (" << icp.getFitnessScore() << " > " << loopFitnessScoreThreshold << "). Reject this RS loop." << std::endl;
+        std::cout << "  [RS loop] ICP fitness test failed (" << icp.getFitnessScore() << " > " << RSloopFitnessScoreThreshold << "). Reject this RS loop." << std::endl;
+        std::cout << "  index are  " << loop_idx_target_session << "  and  " << loop_idx_source_session <<std::endl;
         mtx.unlock();
         return std::nullopt;
     }
     else
     {
         mtx.lock();
-        std::cout << "  [RS loop] ICP fitness test passed (" << icp.getFitnessScore() << " < " << loopFitnessScoreThreshold << "). Add this RS loop." << std::endl;
+        std::cout << "  [RS loop] ICP fitness test passed (" << icp.getFitnessScore() << " < " << RSloopFitnessScoreThreshold << "). Add this RS loop." << std::endl;
+        std::cout << "  index are  " << loop_idx_target_session << "  and  " << loop_idx_source_session <<std::endl;
         mtx.unlock();
     }
 
@@ -381,6 +391,8 @@ void LTslam::addAllSessionsToGraph()
         // 构建图的其他节点
         addSessionToCentralGraph(_sess);
     }
+    // 加入rtk先验
+    addRtkGuess();
     // gtsam::Pose3 test = initialEstimate.at<gtsam::Pose3>(genAnchorNodeIdx(source_sess_idx));
     // cout << "test:  " << test.translation().x() << " " << test.translation().y() << " " << test.translation().z() << endl;
 } // addAllSessionsToGraph
@@ -449,6 +461,11 @@ void LTslam::addSCloops()
                  << " (anchor nodes are " << genAnchorNodeIdx(target_sess_idx) << " and " << genAnchorNodeIdx(source_sess_idx) << ")" << endl;
             mtx.unlock();
         }
+        else
+        {
+            // Ding 对于SC匹配上但是不满足阈值的 也加入RS匹配
+            RSLoopIdxPairs_.emplace_back(std::pair(-1, loop_idx_source_session));
+        }
     }
 } // addSCloops
 
@@ -486,12 +503,12 @@ double LTslam::calcInformationGainBtnTwoNodes(const int loop_idx_target_session,
 void LTslam::findNearestRSLoopsTargetNodeIdx() // based-on information gain
 {
     std::vector<std::pair<int, int>> validRSLoopIdxPairs;
-
+    cout << "RS size:  " << RSLoopIdxPairs_.size() << endl;
     for (std::size_t i = 0; i < RSLoopIdxPairs_.size(); i++)
     {
         // curr query pose
         auto rsloop_idx_pair = RSLoopIdxPairs_.at(i);
-        auto rsloop_idx_source_session = rsloop_idx_pair.second;
+        auto rsloop_idx_source_session = rsloop_idx_pair.second; // first:-1  second:source_session_idx
         auto rsloop_global_idx_source_session = genGlobalNodeIdx(source_sess_idx, rsloop_idx_source_session);
 
         auto source_node_idx = rsloop_idx_source_session;
@@ -513,10 +530,10 @@ void LTslam::findNearestRSLoopsTargetNodeIdx() // based-on information gain
                 target_node_idxes_within_ball.push_back(target_node_idx);
                 // cout << "(all) RS pair detected: " << target_node_idx << " <-> " << source_node_idx << endl;
             }
-            // else
-            // {
-            //     cout << "posedistance:  " << poseDistance(query_pose_central_coord, target_pose) << endl;
-            // }
+            else
+            {
+                // cout << "posedistance:  " << poseDistance(query_pose_central_coord, target_pose) << endl;
+            }
         }
 
         // if no nearest one, skip
@@ -537,7 +554,7 @@ void LTslam::findNearestRSLoopsTargetNodeIdx() // based-on information gain
             }
         }
 
-        // cout << "RS pair detected: " << selected_near_target_node_idx << " <-> " << source_node_idx << endl;
+        cout << "RS pair detected: " << selected_near_target_node_idx << " <-> " << source_node_idx << endl;
         // cout << "info gain: " << max_information_gain << endl;
 
         validRSLoopIdxPairs.emplace_back(std::pair<int, int>{selected_near_target_node_idx, source_node_idx});
@@ -620,13 +637,16 @@ void LTslam::initTrajectoryByAnchoring(const Session &_sess)
     if (_sess.is_base_session_)
     {
         gtSAMgraph.add(PriorFactor<gtsam::Pose3>(this_session_anchor_node_idx, poseOrigin, priorNoise));
+        initialEstimate.insert(this_session_anchor_node_idx, poseOrigin);
     }
     else
     {
+        // gtSAMgraph.add(PriorFactor<gtsam::Pose3>(this_session_anchor_node_idx, rtkPose, largeNoise));
+        // initialEstimate.insert(this_session_anchor_node_idx, rtkPose);
         gtSAMgraph.add(PriorFactor<gtsam::Pose3>(this_session_anchor_node_idx, poseOrigin, largeNoise));
+        initialEstimate.insert(this_session_anchor_node_idx, poseOrigin);
     }
 
-    initialEstimate.insert(this_session_anchor_node_idx, poseOrigin);
     // cout << "this_session_anchor_node_idx:" << this_session_anchor_node_idx << endl;
 
 } // initTrajectoryByAnchoring
@@ -639,7 +659,7 @@ void LTslam::addSessionToCentralGraph(const Session &_sess)
         int node_idx = _node.second.idx;
         auto &curr_pose = _node.second.initial;
 
-        int prev_node_global_idx = genGlobalNodeIdx(_sess.index_, node_idx - 1);
+        // int prev_node_global_idx = genGlobalNodeIdx(_sess.index_, node_idx - 1);
         int curr_node_global_idx = genGlobalNodeIdx(_sess.index_, node_idx);
         // cout << "curr_node_global_idx:" << curr_node_global_idx << endl;
 
@@ -682,6 +702,20 @@ void LTslam::addSessionToCentralGraph(const Session &_sess)
                 cout << "add a loop edge between " << from_node_global_idx << " and " << to_node_global_idx << endl;
         }
     }
+}
+
+void LTslam::addRtkGuess()
+{
+    // add rtk edge for 1st frame
+    // edge 准确度用noise表征 一直存在图中 不会改变
+    // initialEstimate 为指定优化的迭代初值，更合适
+    // gtsam::Pose3 rtk_pose(Rot3(Eigen::Quaterniond(-0.00147915,-0.00955925,0.303899,0.952655)), Point3(Eigen::Vector3d(17.7519,-272.441,-3.24066)));
+    // gtsam::Pose3 rtk_pose(Rot3(Eigen::Quaterniond(-0.00147915,-0.00955925,0.303899,0.952655)), Point3(Eigen::Vector3d(10.0,-260.0,-3.00)));
+    // gtSAMgraph.add(BetweenFactor<gtsam::Pose3>(genAnchorNodeIdx(target_sess_idx), genAnchorNodeIdx(source_sess_idx), rtk_pose, rtkNoise));
+    gtsam::Rot3 testrot = Rot3(Eigen::Quaterniond(-0.00147915, -0.00955925, 0.303899, 0.952655));
+    std::cout << "  ref:  "
+              << "17.7519,-272.441,-3.24066"
+              << "  and " << testrot.roll() << "   " << testrot.pitch() << "   " << testrot.yaw() << std::endl;
 }
 
 void LTslam::loadAllSessions()

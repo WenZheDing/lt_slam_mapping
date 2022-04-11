@@ -1,0 +1,20 @@
+<launch>
+    
+    <!-- <param name="central_bag_path" type="string" value="/home/ding/backup/dataset/haibo/0119s95.bag" /> -->
+    <!-- <param name="query_bag_path" type="string" value="/home/ding/backup/dataset/haibo/0118_2s95.bag" /> -->
+    <!-- <param name="query_bag_path" type="string" value="/home/ding/backup/dataset/haibo/0119filter.bag" /> -->
+
+    <param name="central_bag_path" type="string" value="/home/ding/backup/dataset/haibo/data/0313_1/0313b95.bag" /> 
+    <param name="query_bag_path" type="string" value="/home/ding/backup/dataset/haibo/data/0313/bb95_0313.bag" />
+    <param name="imu_topic" type="string" value="/imu_data"/>
+    <param name="lidar_topic" type="string" value="/lidar_aeb/raw_points"/>
+
+
+    <node pkg="json_test" type="lt_visualize" name="lt_visualize" output="screen"/>
+
+    <arg name="rviz" default="true" />
+    <group if="$(arg rviz)">
+        <node launch-prefix="nice" pkg="rviz" type="rviz" name="rviz" args="-d $(find json_test)/rviz/test3.rviz" />
+    </group>
+
+</launch>

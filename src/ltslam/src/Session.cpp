@@ -67,7 +67,7 @@ void Session::initKeyPoses(void)
     originPoses6D->push_back( thisPose6D );
 } // initKeyPoses
 
-
+// 更新每个session的cloudKeyPoses6D，转化为在central坐标系下的关键点位姿
 void Session::updateKeyPoses(const gtsam::ISAM2 * _isam, const gtsam::Pose3& _anchor_transform)
 {
     using gtsam::Pose3;
@@ -229,6 +229,7 @@ void Session::loadSessionGraph()
     std::string strOneLine;
     while (getline(posefile_handle, strOneLine)) 
     {
+        // 保存一行的信息
         G2oLineInfo line_info = splitG2oFileLine(strOneLine);
 
         // save variables (nodes)

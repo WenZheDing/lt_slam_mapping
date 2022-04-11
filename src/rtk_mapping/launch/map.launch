@@ -4,35 +4,25 @@
     
     <!-- <param name="bag_path" type="string" value="/home/ding/backup/dataset/haibo/0119s95.bag" />
     <param name="map_path" type="string" value="/home/ding/backup/dataset/haibo/lt_lidar_map" />
-    <param name="saved_json_path" type="string" value="/home/ding/backup/dataset/haibo/lt_lidar_map/global_map.json"/>
-    <param name="map_pcd_path" type="string" value="/home/ding/backup/dataset/haibo/lt_lidar_map/original_map.pcd" />
-    <param name="final_map_path" type="string" value="/home/ding/backup/dataset/haibo/lt_lidar_map/map.pcd" />
-    <param name="optimized_pose_path" type="string" value="/home/ding/backup/dataset/haibo/out/01-02-manyloops/lt_lidar_map_central_aft_intersession_loops.txt" /> -->
 
-    <!-- <param name="bag_path" type="string" value="/disk3/0121.bag" />     -->
-    <!-- <param name="map_path" type="string" value="/home/mdc/sjtu/lt_lidar_map" />     -->
-    <!-- <param name="saved_json_path" type="string" value="/home/mdc/sjtu/lt_lidar_map/global_map.json"/> -->
-    <!-- <param name="map_pcd_path" type="string" value="/home/mdc/sjtu/lt_lidar_map/original_map.pcd" /> -->
-    <!-- <param name="final_map_path" type="string" value="/home/mdc/sjtu/lt_lidar_map/map.pcd" /> -->
-    
-    <!-- <param name="bag_path" type="string" value="/home/ding/backup/dataset/haibo/0118_2s95.bag" />
-    <param name="map_path" type="string" value="/home/ding/backup/dataset/haibo/02" />
-    <param name="saved_json_path" type="string" value="/home/ding/backup/dataset/haibo/02/global_map.json"/>
-    <param name="map_pcd_path" type="string" value="/home/ding/backup/dataset/haibo/02/original_map.pcd" />
-    <param name="final_map_path" type="string" value="/home/ding/backup/dataset/haibo/02/map.pcd" />
-    <param name="optimized_pose_path" type="string" value="/home/ding/backup/dataset/haibo/out/01-02-manyloops/02_central_aft_intersession_loops.txt" /> --> -->
+    <arg name="arg_bag_path" default="/home/ding/backup/dataset/haibo/0118_2s95.bag"/>
+    <arg name="arg_map_path" default="/home/ding/backup/dataset/haibo/02"/>
 
-   
-    <arg name="arg_bag_path" default="/home/ding/backup/dataset/haibo/data/0313_2/0313b95.bag"/>
-    <arg name="arg_map_path" default="/home/ding/backup/dataset/haibo/data/0313_2"/>
+    <arg name="arg_bag_path" default="/home/ding/backup/dataset/haibo/0119filter.bag"/>
+    <arg name="arg_map_path" default="/home/ding/backup/dataset/haibo/03"/>-->
+
+    <!-- <arg name="arg_bag_path" default="/home/ding/backup/dataset/haibo/data/0313_1/0313b95.bag"/>
+    <arg name="arg_map_path" default="/home/ding/backup/dataset/haibo/04"/> -->
+
+    <!-- <arg name="arg_bag_path" default="/home/ding/backup/dataset/haibo/data/0313_2/0313b95.bag"/>
+    <arg name="arg_map_path" default="/home/ding/backup/dataset/haibo/05"/>--> -->
+
+    <arg name="arg_bag_path" default="/home/ding/backup/dataset/haibo/data/0313/bb95_0313.bag"/>
+    <arg name="arg_map_path" default="/home/ding/backup/dataset/haibo/06"/>-->
+
     <param name="bag_path" type="string" value="$(arg arg_bag_path)" />
     <param name="map_path" type="string" value="$(arg arg_map_path)" />
-    <!-- <param name="bag_path" type="string" value="/home/ding/backup/dataset/haibo/data/0313_2/0313b95.bag" /> -->
-    <!-- <param name="map_path" type="string" value="/home/ding/backup/dataset/haibo/data/0313_2" /> -->
-    <!-- <param name="saved_json_path" type="string" value="/home/ding/backup/dataset/haibo/data/0313/global_map.json"/>
-    <param name="map_pcd_path" type="string" value="/home/ding/backup/dataset/haibo/data/0313/original_map.pcd" />
-    <param name="final_map_path" type="string" value="/home/ding/backup/dataset/haibo/data/0313/map.pcd" /> -->
-    <param name="optimized_pose_path" type="string" value="/home/ding/backup/dataset/haibo/data/0313/out/01-02-manyloops/02_central_aft_intersession_loops.txt" /> -->
+    <param name="optimized_pose_path" type="string" value="/home/ding/backup/dataset/haibo/data/0313/out/01-02-manyloops/02_central_aft_intersession_loops.txt" /> 
 
     <param name="imu_topic" type="string" value="/imu_data"/>
     <param name="lidar_topic" type="string" value="/lidar_aeb/raw_points"/>
@@ -40,8 +30,10 @@
     <!--................The End...............-->
     
     <!--....................keyframe param....................-->
-    <param name="map_dist" type="double" value="7" />
-    <!-- <param name="map_dist" type="double" value="4" /> -->
+    <!-- <param name="map_dist" type="double" value="7" /> -->
+    <param name="map_dist" type="double" value="1" />
+
+    <param name="save_map_dist" type="int" value="6" />
 
     <param name="submap_size" type="int" value="60" />
 

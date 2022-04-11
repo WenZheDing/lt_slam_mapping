@@ -180,10 +180,12 @@ bool isTwoStringSame(std::string _str1, std::string _str2)
 	return !(_str1.compare(_str2));
 }
 
+// 递归调用，把高位到低位依次存进digits中
 void collect_digits(std::vector<int>& digits, int num) {
     if (num > 9) {
         collect_digits(digits, num / 10);
     }
+    // 存个位
     digits.push_back(num % 10);
 }
 

@@ -120,8 +120,10 @@ catkin_package(
 ## Specify additional locations of header files
 ## Your package locations should be listed before other locations
 include_directories(
-# include
+  include
   ${catkin_INCLUDE_DIRS}
+  ${PCL_INCLUDE_DIRS}
+  ${GTSAM_INCLUDE_DIR}
 )
 
 ## Declare a C++ library
@@ -210,10 +212,14 @@ include_directories(
 # catkin_add_nosetests(test)
 
 find_package(PCL REQUIRED)
+find_package(GTSAM REQUIRED QUIET)
 
-include_directories(
+
+link_directories(
   include
-		${PCL_INCLUDE_DIRS})
+	${PCL_LIBRARY_DIRS}
+  ${GTSAM_LIBRARY_DIRS}
+)
 
 
 add_executable(json_test src/json_test.cpp)
@@ -221,5 +227,8 @@ target_link_libraries(json_test ${catkin_LIBRARIES} ${PCL_LIBRARIES})
 
 add_executable(local_map_merge src/local_map_merge.cpp)
 target_link_libraries(local_map_merge ${catkin_LIBRARIES} ${PCL_LIBRARIES})
+
+add_executable(lt_visualize src/lt_visualize.cpp)
+target_link_libraries(lt_visualize ${catkin_LIBRARIES} ${PCL_LIBRARIES} gtsam) 
 
 

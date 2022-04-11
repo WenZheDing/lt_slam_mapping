@@ -178,7 +178,7 @@ Visualization Manager:
       Queue Size: 10
       Selectable: true
       Size (Pixels): 3
-      Size (m): 0.10000000149011612
+      Size (m): 0.20000000298023224
       Style: Flat Squares
       Topic: /filteredcloud
       Unreliable: false
@@ -221,25 +221,25 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 56.703067779541016
+      Distance: 32.00099563598633
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: 652.4890747070312
-        Y: 204.478515625
-        Z: 4.443909168243408
+        X: 647.5026245117188
+        Y: 202.22373962402344
+        Z: 4.578017234802246
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.23479624092578888
+      Pitch: 1.3697959184646606
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 1.6385917663574219
+      Yaw: 1.9535917043685913
     Saved: ~
 Window Geometry:
   Displays:

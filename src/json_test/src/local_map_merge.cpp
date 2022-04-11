@@ -107,6 +107,7 @@ void pointcloud_in_range(const double min_range, const double max_range,
         double x = pcloud_in->points[i].x;
         double y = pcloud_in->points[i].y;
         double s = sqrt(x * x + y * y);
+        // std::cout << "x and y is " << x <<"  and  "<< y<< std::endl;
         if (s >= min_range && s <= max_range)
             pcloud_out->points.push_back(pcloud_in->points[i]);
     }
@@ -186,15 +187,6 @@ void CreateLocalMap()
                 classify_max[y][x].push_back(point.z);
             }
         }
-        pcl::PassThrough<pcl::PointXYZI> pass;
-        pass.setInputCloud(pLaserCloud);
-        pass.setFilterFieldName("x");
-        pass.setFilterLimits(d_width1 + 1, d_width2 - 1);
-        pass.setFilterFieldName("y");
-        pass.setFilterLimits(d_ego_left, d_ego_right);
-        pass.setFilterFieldName("z");
-        pass.setFilterLimits(d_z1, d_z2);
-        pass.filter(*FilteredCloud);
     }
     o_local_map_.header.frame_id = "base";
     o_local_map_.header.stamp = ros::Time::now();
@@ -221,7 +213,7 @@ void CreateLocalMap()
             if (classify_park[i][j].size() >= i_classify_park_thresh)
             {
                 o_local_map_.data[index] = 100;
-                std::cout << "park is " << classify_park[i][j].size() << std::endl;
+                // std::cout << "park is " << classify_park[i][j].size() << std::endl;
             }
             // else
             // {
@@ -433,7 +425,7 @@ int main(int argc, char **argv)
     {
         auto m = *it;
         std::string topic = m.getTopic();
-        if (topic == std::string(lidar_topic))
+        if (topic == std::string(lidar_topic) && !lidar_init)
         {
             sensor_msgs::PointCloud2::ConstPtr pcloud = m.instantiate<sensor_msgs::PointCloud2>();
             pcl::PointCloud<pcl::PointXYZI>::Ptr tmp(new pcl::PointCloud<pcl::PointXYZI>());
@@ -443,8 +435,29 @@ int main(int argc, char **argv)
                 pointcloud_in_range(min_distance, max_distance, tmp, pLaserCloud);
                 lidar_init = true;
             }
+            // for visualization
+            pcl::PassThrough<pcl::PointXYZI> pass;
+            pass.setInputCloud(pLaserCloud);
+            pass.setFilterFieldName("x");
+            pass.setFilterLimits(d_width1 + 1, d_width2 - 1);
+            // pass.setFilterLimits(1, 10);
+            pass.setFilterLimitsNegative(false);
+            pass.filter(*FilteredCloud);
+            pass.setInputCloud(FilteredCloud);
+            pass.setFilterFieldName("y");
+            pass.setFilterLimits(d_height1 + 1, d_height2 - 1);
+            // pass.setFilterLimits(-5, -4);
+            pass.setFilterLimitsNegative(false);
+            pass.filter(*FilteredCloud);
+            pass.setInputCloud(FilteredCloud);
+            pass.setFilterFieldName("z");
+            pass.setFilterLimits(d_z1, d_z2);
+            pass.setFilterLimitsNegative(false);
+            pass.filter(*FilteredCloud);
+            std::cout << "before size:  " << pLaserCloud->size() << std::endl;
+            std::cout << "fliter size:  " << FilteredCloud->size() << std::endl;
         }
-        else if (topic == std::string(imu_topic))
+        else if (topic == std::string(imu_topic) && !imu_init)
         {
             sensor_msgs::Imu::ConstPtr pRtk = m.instantiate<sensor_msgs::Imu>();
             o_imu_msg_.AngleHeading = pRtk->orientation.w;

@@ -27,7 +27,9 @@ public:
     int numberOfCores;
 
     float RSLoopsThreshold;
-    float loopFitnessScoreThreshold;
+    float SCloopFitnessScoreThreshold;
+    float RSloopFitnessScoreThreshold;
+
 
 public:
     RosParamServer();

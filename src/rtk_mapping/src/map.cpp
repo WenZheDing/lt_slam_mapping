@@ -68,6 +68,7 @@ public:
         nh_.getParam("update_map", update_map);
         nh_.getParam("map_dist", map_dist);
         nh_.getParam("submap_size", submap_size);
+        nh_.getParam("save_map_dist", save_map_dist);
         sc_path = map_path + "/SCDs";
         key_frames_path = map_path + "/key_frames";
         saved_json_path = map_path + "/global_map.json";
@@ -194,40 +195,49 @@ public:
 
         pgSaveStream = std::fstream(map_path + "/singlesession_posegraph.g2o", std::fstream::out);
         rtkSaveStream = std::fstream(map_path + "/singlesession_rtkpose.g2o", std::fstream::out);
+
+        if (access(map_path.c_str(), 6) != 0)
+        {
+            int map_create = mkdir(map_path.c_str(), S_IRUSR | S_IWUSR | S_IXUSR | S_IRWXG | S_IRWXO);
+            if (!map_create)
+                printf("create map_path:%s\n", map_path.c_str());
+            else
+                printf("create map_path failed! error code : %d \n", map_create);
+        }
         if (access(sc_path.c_str(), 6) != 0)
         {
             int sc_create = mkdir(sc_path.c_str(), S_IRUSR | S_IWUSR | S_IXUSR | S_IRWXG | S_IRWXO);
             if (!sc_create)
-                printf("create sc_path:%s\n", sc_path);
+                printf("create sc_path:%s\n", sc_path.c_str());
             else
-                printf("create sc_path failed! error code : %s \n", sc_create, sc_path);
+                printf("create sc_path failed! error code : %d \n", sc_create);
         }
         if (access(key_frames_path.c_str(), 6) != 0)
         {
             int key_frames_create = mkdir(key_frames_path.c_str(), S_IRUSR | S_IWUSR | S_IXUSR | S_IRWXG | S_IRWXO);
             if (!key_frames_create)
-                printf("create key_frames_path:%s\n", key_frames_path);
+                printf("create key_frames_path:%s\n", key_frames_path.c_str());
             else
-                printf("create key_frames_path failed! error code : %s \n", key_frames_create, key_frames_path);
+                printf("create key_frames_path failed! error code : %d \n", key_frames_create);
         }
 
         if (access(scans_path.c_str(), 6) != 0)
         {
             int scans_create = mkdir(scans_path.c_str(), S_IRUSR | S_IWUSR | S_IXUSR | S_IRWXG | S_IRWXO);
             if (!scans_create)
-                printf("create scans_path:%s\n", scans_path);
+                printf("create scans_path:%s\n", scans_path.c_str());
             else
-                printf("create scans_path failed! error code : %s \n", scans_create, scans_path);
+                printf("create scans_path failed! error code : %d \n", scans_create);
         }
 
-        if (access(submap_path.c_str(), 6) != 0)
-        {
-            int submap_create = mkdir(submap_path.c_str(), S_IRUSR | S_IWUSR | S_IXUSR | S_IRWXG | S_IRWXO);
-            if (!submap_create)
-                printf("create submap_path:%s\n", submap_path);
-            else
-                printf("create submap_path failed! error code : %s \n", submap_create, submap_path);
-        }
+        // if (access(submap_path.c_str(), 6) != 0)
+        // {
+        //     int submap_create = mkdir(submap_path.c_str(), S_IRUSR | S_IWUSR | S_IXUSR | S_IRWXG | S_IRWXO);
+        //     if (!submap_create)
+        //         printf("create submap_path:%s\n", submap_path.c_str());
+        //     else
+        //         printf("create submap_path failed! error code : %d \n", submap_create);
+        // }
     }
 
     void getRtkPose()
@@ -345,6 +355,7 @@ public:
 
             lidar_topic_count++;
             float percentage = (float)lidar_topic_count / lidar_topic_num;
+            cout << "总共" << lidar_topic_num << "帧" << endl;
             cout << "\n当前建图进度：" << setprecision(4) << percentage * 100 << "%" << endl;
 
             sensor_msgs::PointCloud2::ConstPtr pcloud = m.instantiate<sensor_msgs::PointCloud2>();
@@ -364,6 +375,11 @@ public:
                     break;
                 //根据标定外参获取激光雷达在全局雷达坐标系下的位置
                 //全局雷达坐标系的原点取第一帧激光雷达所对应的rtk全局坐标系下的位姿
+                // q_aa2bb 用途：把aa坐标系下的向量转到bb坐标系下 posebb = q_aa2bb*poseaa  (Q上bb下aa)
+                // q_aa2bb = q_transformaa2bb 计算方法：把aa坐标系变换到bb坐标系使重合 的矩阵在bb坐标系下的表示
+                // q_odom =  q_lidar2initlidar  =   q_lidar2rtk 乘q_rtk2global 乘q_golbal2initlidar
+                // 由于向量旋转为左乘 故为 q_odom =  q_lidar2initlidar  =   q_lidar2rtk 乘q_rtk2global 乘q_golbal2initlidar = q_golbal2initlidar * q_rtk2global * q_lidar2rtk
+                // 此处的global计算时采用相对于initrtk的变换(存rtk时补偿原点)
                 q_lidar_rtk = q_imu2lidar * q_rtk_2_global * q_lidar2imu;
                 t_lidar_rtk = q_imu2lidar.matrix() * (q_rtk_2_global.matrix() * t_lidar_2_imu + t_rtk_2_global) + t_imu_2_lidar;
 
@@ -397,6 +413,7 @@ public:
                     anh_ndt.setInputSource(pSourceCloud);
                     anh_ndt.align(init_guess.cast<float>());
 
+                    //滤波后 雷达坐标系下点云 和 转到组合导航坐标系下子地图 作ndt 返回雷达坐标系在组合导航坐标系下位姿
                     trans = anh_ndt.getFinalTransformation();
 
                     Eigen::Vector3d dt(trans(0, 3), trans(1, 3), trans(2, 3));
@@ -454,6 +471,7 @@ public:
             gtSAMgraph.add(PriorFactor<Pose3>(0, Pose3(Rot3(q_odometry), Point3(t_odometry)), priorNoise));
             initialEstimate.insert(0, Pose3(Rot3(q_odometry), Point3(t_odometry)));
             writeVertexFromQT(0, q_odometry, t_odometry);
+            loopClosure_time = odometry_time;
         }
         else
         {
@@ -687,6 +705,8 @@ public:
         gtSAMgraph.resize(0);
         initialEstimate.clear();
 
+        writeEdge({current_keyframe_id, detected_history_keyframe_id}, poseFrom.between(poseTo)); // write loop edge into .g2o
+
         //update keyframe match_map
         //keyframe
         int numPoses = isamCurrentEstimate.size();
@@ -877,8 +897,9 @@ public:
             {
                 splitPoseFileLine(strOneLine, pointcloud_q, pointcloud_t);
             }
+            final_map_path = map_path + "/updated_map.pcd";
         }
-        for (int i = 0; i < KeyFramePoses3D->points.size(); i++)
+        for (int i = 0; i < KeyFramePoses3D->points.size(); i += save_map_dist)
         {
             pcl::PointCloud<pcl::PointXYZI>::Ptr cloud_after_filtered(new pcl::PointCloud<pcl::PointXYZI>());
             cloud_after_filtered = PointCloudFilter(CloudKeyFrames[i]);
@@ -914,51 +935,49 @@ public:
         printf("save map pcd at %s \n", original_map_pcd.c_str());
         pcl::io::savePCDFileASCII(dense_map_pcd, *pDenseMap);
 
-        map<string, pcl::PointCloud<pcl::PointXYZI>::Ptr> map_name_cloud;
-        map<string, pcl::PointCloud<pcl::PointXYZI>::Ptr>::iterator it;
-        for (uint32_t i = 0; i < pSaveMapDS->points.size(); i++)
-        {
-            double px = pSaveMapDS->points[i].x;
-            double py = pSaveMapDS->points[i].y;
+        // save submap
+        // map<string, pcl::PointCloud<pcl::PointXYZI>::Ptr> map_name_cloud;
+        // map<string, pcl::PointCloud<pcl::PointXYZI>::Ptr>::iterator it;
+        // for (uint32_t i = 0; i < pSaveMapDS->points.size(); i++)
+        // {
+        //     double px = pSaveMapDS->points[i].x;
+        //     double py = pSaveMapDS->points[i].y;
 
-            int x = floor(px / submap_size);
-            int y = floor(py / submap_size);
+        //     int x = floor(px / submap_size);
+        //     int y = floor(py / submap_size);
 
-            string str = std::to_string(x) + "_" + std::to_string(y);
+        //     string str = std::to_string(x) + "_" + std::to_string(y);
 
-            it = map_name_cloud.find(str);
+        //     it = map_name_cloud.find(str);
 
-            //如果该部分子地图之前出现过，直接存入
-            if (it != map_name_cloud.end())
-            {
-                //往对应子地图中存入点云
-                pcl::PointCloud<pcl::PointXYZI>::Ptr tmp = it->second;
-                tmp->points.push_back(pSaveMapDS->points[i]);
-            }
+        //     //如果该部分子地图之前出现过，直接存入
+        //     if (it != map_name_cloud.end())
+        //     {
+        //         //往对应子地图中存入点云
+        //         pcl::PointCloud<pcl::PointXYZI>::Ptr tmp = it->second;
+        //         tmp->points.push_back(pSaveMapDS->points[i]);
+        //     }
 
-            else
-            {
-                pcl::PointCloud<pcl::PointXYZI>::Ptr tmp(new pcl::PointCloud<pcl::PointXYZI>);
-                tmp->points.push_back(pSaveMapDS->points[i]);
-                map_name_cloud.insert(std::pair<string, pcl::PointCloud<pcl::PointXYZI>::Ptr>(str, tmp));
-            }
-        }
-
+        //     else
+        //     {
+        //         pcl::PointCloud<pcl::PointXYZI>::Ptr tmp(new pcl::PointCloud<pcl::PointXYZI>);
+        //         tmp->points.push_back(pSaveMapDS->points[i]);
+        //         map_name_cloud.insert(std::pair<string, pcl::PointCloud<pcl::PointXYZI>::Ptr>(str, tmp));
+        //     }
+        // }
         // to pcd file
-        for (it = map_name_cloud.begin(); it != map_name_cloud.end(); it++)
-        {
-            string str = it->first;
-            string submap_pcd = submap_path + "/" + str + ".pcd";
+        // for (it = map_name_cloud.begin(); it != map_name_cloud.end(); it++)
+        // {
+        //     string str = it->first;
+        //     string submap_pcd = submap_path + "/" + str + ".pcd";
 
-            pcl::PointCloud<pcl::PointXYZI>::Ptr tmp = it->second;
-            tmp->height = 1;
-            tmp->width = tmp->points.size();
+        //     pcl::PointCloud<pcl::PointXYZI>::Ptr tmp = it->second;
+        //     tmp->height = 1;
+        //     tmp->width = tmp->points.size();
 
-            pcl::io::savePCDFileASCII(submap_pcd, *tmp);
-            printf("save submap pcd at : %s \n", submap_pcd.c_str());
-        }
-        printf("pcd map saved ~~~ \n");
-        printf("start to creat occupancy grid map .... \n");
+        //     pcl::io::savePCDFileASCII(submap_pcd, *tmp);
+        //     printf("save submap pcd at : %s \n", submap_pcd.c_str());
+        // }
 
         /**
          * @name:
@@ -1014,14 +1033,16 @@ public:
         pcl::io::savePCDFileASCII(final_map_path, *cloud_after_rotation);
 
         // save pose graph (runs when programe is closing)
+        printf("pcd map saved ~~~ \n");
         cout << "****************************************************" << endl;
-        cout << "Saving the posegraph ..." << endl; // giseop
+        cout << "Saving the posegraph ..." << endl;
 
         for (auto &_line : vertices_str)
             pgSaveStream << _line << std::endl;
         for (auto &_line : edges_str)
             pgSaveStream << _line << std::endl;
         pgSaveStream.close();
+        cout << vertices_str.size() << endl;
         for (auto &_line : rtkpose_str)
             rtkSaveStream << _line << std::endl;
         rtkSaveStream.close();
@@ -1141,6 +1162,9 @@ public:
                     q.x(), q.y(), q.z(), q.w(), end2);
         }
         fclose(fp);
+
+        std::ofstream os(map_path + "/PoseGraphTest.dot");
+        gtSAMgraph.saveGraph(os, isamCurrentEstimate);
     }
 
 private:
@@ -1186,6 +1210,7 @@ private:
     double dist;
 
     int submap_size;
+    int save_map_dist; // add a keyframe to map in a set of save_map_dist keyframes
 
     //rtk data manager
     rtk_pose pose_manager;
