@@ -6,6 +6,9 @@
 
     <param name="central_bag_path" type="string" value="/home/ding/backup/dataset/haibo/data/0313_1/0313b95.bag" /> 
     <param name="query_bag_path" type="string" value="/home/ding/backup/dataset/haibo/data/0313/bb95_0313.bag" />
+    <param name="central_pcd_path" type="string" value="/home/ding/backup/dataset/haibo/data/0313_1/map.pcd" />
+    <param name="query_pcd_path" type="string" value="//home/ding/backup/dataset/haibo/data/0313/update/updated_map.pcd" />
+    <param name="query_init_pcd_path" type="string" value="/home/ding/backup/dataset/haibo/data/0313/map.pcd" />
     <param name="imu_topic" type="string" value="/imu_data"/>
     <param name="lidar_topic" type="string" value="/lidar_aeb/raw_points"/>
 

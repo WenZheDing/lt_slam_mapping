@@ -69,15 +69,7 @@ public:
         nh_.getParam("map_dist", map_dist);
         nh_.getParam("submap_size", submap_size);
         nh_.getParam("save_map_dist", save_map_dist);
-        sc_path = map_path + "/SCDs";
-        key_frames_path = map_path + "/key_frames";
-        saved_json_path = map_path + "/global_map.json";
-        map_pcd_path = map_path + "/original_map.pcd";
-        final_map_path = map_path + "/map.pcd";
-        original_map_pcd = map_path + "/original_map.pcd";
-        dense_map_pcd = map_path + "/dense_map.pcd";
-        submap_path = map_path + "/submap";
-        scans_path = map_path + "/Scans";
+
         //load occupancy grid map params
         nh_.getParam("min_distance", min_distance);
         nh_.getParam("max_distance", max_distance);
@@ -87,9 +79,26 @@ public:
         nh_.getParam("radius_filter_radius", filter_radius);
         nh_.getParam("radius_filter_count", filter_count);
         nh_.getParam("optimized_pose_path", optimized_pose_path);
+        nh_.getParam("former_bag_path", former_bag_path);
         // nh_.getParam("saved_json_path", saved_json_path);
         // nh_.getParam("map_pcd_path", map_pcd_path);
         // nh_.getParam("final_map_path", final_map_path);
+
+        if (update_map)
+        {
+            map_path = map_path + "/update";
+        }
+
+        sc_path = map_path + "/SCDs";
+        key_frames_path = map_path + "/key_frames";
+        saved_json_path = map_path + "/global_map.json";
+        map_pcd_path = map_path + "/original_map.pcd";
+        final_map_path = map_path + "/map.pcd";
+        original_map_pcd = map_path + "/original_map.pcd";
+        dense_map_pcd = map_path + "/dense_map.pcd";
+        submap_path = map_path + "/submap";
+        scans_path = map_path + "/Scans";
+        optimized_pose_path = map_path + "/out/" + optimized_pose_path;
 
         //ros
         pubMap = nh.advertise<sensor_msgs::PointCloud2>("/map", 2);
@@ -251,7 +260,7 @@ public:
 
         foreach (rosbag::MessageInstance const m, view)
         {
-            std::string topic = m.getTopic();
+            // std::string topic = m.getTopic();
 
             sensor_msgs::Imu::ConstPtr pRtk = m.instantiate<sensor_msgs::Imu>();
             if (!get_map_origin_informaiton)
@@ -264,6 +273,25 @@ public:
                 pose_manager.rtk_data_in(*pRtk);
         }
         bag.close();
+        if (update_map)
+        {
+            // 考虑到第一帧建图时已经有t（yaw）  一次按central sess的坐标系旋转，不必再一次旋转第一帧的yaw 就可使第一帧朝向正北
+            bag.open(former_bag_path, rosbag::bagmode::Read);
+            rosbag::View former_view(bag, rosbag::TopicQuery(topics));
+            rosbag::View::iterator it = former_view.begin();
+            for (; it != former_view.end(); ++it)
+            {
+                auto m = *it;
+                sensor_msgs::Imu::ConstPtr pRtk = m.instantiate<sensor_msgs::Imu>();
+                if (pRtk != NULL)
+                {
+                    origin_heading = pRtk->orientation.w;
+                    std::cout << "[revised]: The heading of origin is : " << pRtk->orientation.w << std::endl;
+                    break;
+                }
+            }
+            bag.close();
+        }
     }
 
     void writeVertexFromQT(const int _node_idx, const Eigen::Quaternion<double> &q_, const Eigen::Vector3d &t_)
@@ -891,20 +919,33 @@ public:
         {
             pointcloud_q.clear();
             pointcloud_t.clear();
+            cout << "optimized_pose_path: " << optimized_pose_path << endl;
             std::ifstream posefile_handle(optimized_pose_path);
             std::string strOneLine;
             while (getline(posefile_handle, strOneLine))
             {
+                // 在第一次建图坐标系下的q t
                 splitPoseFileLine(strOneLine, pointcloud_q, pointcloud_t);
             }
+            cout << "size of pointcloud_q:  " << pointcloud_q.size() << endl;
             final_map_path = map_path + "/updated_map.pcd";
+            // proved unused
+            // double origin_yaw_in_central_sess;
+            // Eigen::Vector3d eulerAngle = pointcloud_q[0].matrix().eulerAngles(2, 1, 0);
+            // origin_yaw_in_central_sess = eulerAngle(0) / M_PI * 180;
+            // std::cout << "[revised]: The heading of origin is : " << origin_heading << " - " << origin_yaw_in_central_sess << std::endl;
+            // origin_heading = origin_heading - origin_yaw_in_central_sess;
         }
-        for (int i = 0; i < KeyFramePoses3D->points.size(); i += save_map_dist)
+        for (int i = 0; i < KeyFramePoses3D->points.size(); i++)
         {
+            if (i * save_map_dist > KeyFramePoses3D->points.size())
+            {
+                break;
+            }
             pcl::PointCloud<pcl::PointXYZI>::Ptr cloud_after_filtered(new pcl::PointCloud<pcl::PointXYZI>());
-            cloud_after_filtered = PointCloudFilter(CloudKeyFrames[i]);
-            *pSaveMap += *transformPointCloud(pointcloud_q[i], pointcloud_t[i], cloud_after_filtered);
-            *pDenseMap += *transformPointCloud(pointcloud_q[i], pointcloud_t[i], CloudKeyFrames[i]);
+            cloud_after_filtered = PointCloudFilter(CloudKeyFrames[i * save_map_dist]);
+            *pSaveMap += *transformPointCloud(pointcloud_q[i * save_map_dist], pointcloud_t[i * save_map_dist], cloud_after_filtered);
+            *pDenseMap += *transformPointCloud(pointcloud_q[i * save_map_dist], pointcloud_t[i * save_map_dist], CloudKeyFrames[i * save_map_dist]);
         }
         downSizeFilter_25.setInputCloud(pSaveMap);
         downSizeFilter_25.filter(*pSaveMapDS);
@@ -1026,6 +1067,7 @@ public:
         Eigen::Quaterniond q_rotation_heading;
         Eigen::Vector3d t_rotation_heading(0.0, 0.0, 0.0);
         R_ROTATION_HEADING = Eigen::AngleAxisd(-(origin_heading * torad_), Eigen::Vector3d::UnitZ());
+        std::cout << "origin_heading is : " << origin_heading << std::endl;
         q_rotation_heading = R_ROTATION_HEADING;
         *cloud_after_rotation = *transformPointCloud(q_rotation_heading, t_rotation_heading, pcd_cloud);
         cloud_after_rotation->height = 1;
@@ -1326,6 +1368,7 @@ private:
     string saved_json_path;
     string final_map_path;
     string optimized_pose_path;
+    string former_bag_path;
     string original_map_pcd;
     string dense_map_pcd;
     string submap_path;

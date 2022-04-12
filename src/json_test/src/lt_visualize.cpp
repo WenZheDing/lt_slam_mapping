@@ -5,80 +5,7 @@
  * @Date: 2022-03-31 10:16:00
  */
 
-#include <ros/ros.h>
-#include <rosbag/bag.h>
-#include <rosbag/view.h>
-#include <tf/transform_broadcaster.h>
-#include <tf/transform_datatypes.h>
-
-#include <nav_msgs/OccupancyGrid.h>
-#include <nav_msgs/GetMap.h>
-#include <geometry_msgs/PolygonStamped.h>
-#include <gtsam/geometry/Rot3.h>
-#include <gtsam/geometry/Pose3.h>
-
-#include <sensor_msgs/PointCloud2.h>
-#include <sensor_msgs/Imu.h>
-#include <pcl/io/pcd_io.h>
-#include <pcl_conversions/pcl_conversions.h>
-#include <pcl/filters/passthrough.h>
-#include <thread>
-
-#include <pcl/point_types.h>
-#include <json/json.h>
-#include <fstream>
-#include <iterator>
-#include <iomanip>
-
-Eigen::Matrix3d R_ENU2IMU_ORIGIN;
-Eigen::Vector3d t_ECEF2ENU_;
-
-double e_ = 0.0818191908425;
-double R_ = 6378137;
-double torad_ = M_PI / 180;
-double Re_ = 0;
-Eigen::Vector3d t(0, 0, 0);
-Eigen::Quaternion<double> q(1, 0, 0, 0);
-
-void calculate_init_pose(const sensor_msgs::Imu rtk, bool init_flag)
-{
-    if (!init_flag)
-    {
-        //东北天相对于第一帧组合导航的旋转矩阵
-        R_ENU2IMU_ORIGIN = Eigen::AngleAxisd(rtk.orientation.w * torad_, Eigen::Vector3d::UnitZ()) *
-                           Eigen::AngleAxisd(rtk.orientation_covariance[1] * torad_, Eigen::Vector3d::UnitY()) *
-                           Eigen::AngleAxisd(rtk.orientation_covariance[0] * torad_, Eigen::Vector3d::UnitX());
-        Re_ = R_ / sqrt(1 - e_ * e_ * sin(rtk.orientation.x * torad_) * sin(rtk.orientation.x * torad_));
-        t_ECEF2ENU_[0] = (Re_ + rtk.orientation.z) * cos(rtk.orientation.x * torad_) * cos(rtk.orientation.y * torad_);
-        t_ECEF2ENU_[1] = (Re_ + rtk.orientation.z) * cos(rtk.orientation.x * torad_) * sin(rtk.orientation.y * torad_);
-        t_ECEF2ENU_[2] = (Re_ * (1 - e_ * e_) + rtk.orientation.z) * sin(rtk.orientation.x * torad_);
-    }
-    else
-    {
-        Eigen::Matrix3d R_ENU;
-        Eigen::Matrix3d R_IMU;
-
-        R_ENU = Eigen::AngleAxisd(rtk.orientation.w * torad_, Eigen::Vector3d::UnitZ()) *
-                Eigen::AngleAxisd(rtk.orientation_covariance[1] * torad_, Eigen::Vector3d::UnitY()) *
-                Eigen::AngleAxisd(rtk.orientation_covariance[0] * torad_, Eigen::Vector3d::UnitX());
-        R_IMU = R_ENU * R_ENU2IMU_ORIGIN.inverse();
-
-        q = R_IMU.inverse();
-
-        Eigen::Vector3d t_ECEF(0, 0, 0);
-        Eigen::Vector3d t_ENU(0, 0, 0);
-
-        t_ECEF[0] = (Re_ + rtk.orientation.z) * cos(rtk.orientation.x * torad_) * cos(rtk.orientation.y * torad_) - t_ECEF2ENU_[0];
-        t_ECEF[1] = (Re_ + rtk.orientation.z) * cos(rtk.orientation.x * torad_) * sin(rtk.orientation.y * torad_) - t_ECEF2ENU_[1];
-        t_ECEF[2] = (Re_ * (1 - e_ * e_) + rtk.orientation.z) * sin(rtk.orientation.x * torad_) - t_ECEF2ENU_[2];
-
-        t_ENU[0] = -sin(rtk.orientation.y * torad_) * t_ECEF[0] + cos(rtk.orientation.y * torad_) * t_ECEF[1];
-        t_ENU[1] = -sin(rtk.orientation.x * torad_) * cos(rtk.orientation.y * torad_) * t_ECEF[0] - sin(rtk.orientation.x * torad_) * sin(rtk.orientation.y * torad_) * t_ECEF[1] + cos(rtk.orientation.x * torad_) * t_ECEF[2];
-        t_ENU[2] = cos(rtk.orientation.x * torad_) * cos(rtk.orientation.y * torad_) * t_ECEF[0] + cos(rtk.orientation.x * torad_) * sin(rtk.orientation.y * torad_) * t_ECEF[1] + sin(rtk.orientation.x * torad_) * t_ECEF[2];
-
-        t = R_ENU2IMU_ORIGIN * t_ENU;
-    }
-}
+#include "lt_visualize.h"
 
 int main(int argc, char **argv)
 {
@@ -88,14 +15,35 @@ int main(int argc, char **argv)
     std::string query_bag_path;
     std::string imu_topic;
     std::string lidar_topic;
+    std::string central_pcd_path;
+    std::string query_pcd_path;
+    std::string query_init_pcd_path;
 
-    // sensor_msgs::PointCloud2 TargetCloud;
-    // sensor_msgs::PointCloud2 TargetCloud2;
+    sensor_msgs::PointCloud2 CentralCloud;
+    sensor_msgs::PointCloud2 QueryCloud;
+    sensor_msgs::PointCloud2 QueryInitCloud;
+
+    pcl::PointCloud<pcl::PointXYZI>::Ptr central_pcd(new pcl::PointCloud<pcl::PointXYZI>);
+    pcl::PointCloud<pcl::PointXYZI>::Ptr query_pcd(new pcl::PointCloud<pcl::PointXYZI>);
+    pcl::PointCloud<pcl::PointXYZI>::Ptr query_init_pcd(new pcl::PointCloud<pcl::PointXYZI>);
+
+    ros::Publisher central_pcd_pub = nh.advertise<sensor_msgs::PointCloud2>("/central_pcd", 2);
+    ros::Publisher query_pcd_pub = nh.advertise<sensor_msgs::PointCloud2>("/query_pcd", 2);
+    ros::Publisher query_init_pcd_pub = nh.advertise<sensor_msgs::PointCloud2>("/query_init_pcd", 2);
 
     nh.getParam("central_bag_path", central_bag_path);
     nh.getParam("query_bag_path", query_bag_path);
     nh.getParam("imu_topic", imu_topic);
     nh.getParam("lidar_topic", lidar_topic);
+    nh.getParam("central_pcd_path", central_pcd_path);
+    nh.getParam("query_pcd_path", query_pcd_path);
+    nh.getParam("query_init_pcd_path", query_init_pcd_path);
+
+    central_pcd.reset(new pcl::PointCloud<pcl::PointXYZI>());
+    query_pcd.reset(new pcl::PointCloud<pcl::PointXYZI>());
+    query_init_pcd.reset(new pcl::PointCloud<pcl::PointXYZI>());
+
+    ros::Rate loop_rate(0.1);
 
     rosbag::Bag bag;
     bag.open(central_bag_path, rosbag::bagmode::Read);
@@ -104,6 +52,7 @@ int main(int argc, char **argv)
     topics.push_back(std::string(imu_topic));
     rosbag::View view(bag, rosbag::TopicQuery(topics));
     rosbag::View::iterator it = view.begin();
+    double x1,y1,z1;
     // 按绝对的时间顺序读取
     for (; it != view.end(); ++it)
     {
@@ -115,6 +64,7 @@ int main(int argc, char **argv)
             if (pRtk != NULL)
             {
                 calculate_init_pose(*pRtk, false);
+                transform_llh_to_xyz(pRtk->orientation.y,pRtk->orientation.x,pRtk->orientation.z,x1,y1,z1);
                 break;
             }
         }
@@ -124,6 +74,7 @@ int main(int argc, char **argv)
     bag2.open(query_bag_path, rosbag::bagmode::Read);
     rosbag::View view2(bag2, rosbag::TopicQuery(topics));
     rosbag::View::iterator it2 = view2.begin();
+    double x2,y2,z2;
     for (; it2 != view2.end(); ++it2)
     {
         auto m = *it2;
@@ -134,6 +85,7 @@ int main(int argc, char **argv)
             if (pRtk != NULL)
             {
                 calculate_init_pose(*pRtk, true);
+                transform_llh_to_xyz(pRtk->orientation.y,pRtk->orientation.x,pRtk->orientation.z,x2,y2,z2);
                 break;
             }
         }
@@ -142,15 +94,48 @@ int main(int argc, char **argv)
     std::cout << "t:   " << t(0) << "  " << t(1) << "  " << t(2) << "  " << std::endl;
     gtsam::Rot3 testrot = gtsam::Rot3(q);
     std::cout << "euler angle:   " << testrot.roll() << "  " << testrot.pitch() << "  " << testrot.yaw() << std::endl;
-    ros::Rate loop_rate(1);
 
-    ros::Publisher filteredcloud_pub = nh.advertise<sensor_msgs::PointCloud2>("/filteredcloud", 2);
+    //publish pointcloud
+    if (pcl::io::loadPCDFile<pcl::PointXYZI>(central_pcd_path, *central_pcd) == -1)
+    {
+        PCL_ERROR("Could not read file :  %s \n", central_pcd_path.c_str());
+        return 0;
+    }
+    if (pcl::io::loadPCDFile<pcl::PointXYZI>(query_pcd_path, *query_pcd) == -1)
+    {
+        PCL_ERROR("Could not read file :  %s \n", query_pcd_path.c_str());
+        return 0;
+    }
+    if (pcl::io::loadPCDFile<pcl::PointXYZI>(query_init_pcd_path, *query_init_pcd) == -1)
+    {
+        PCL_ERROR("Could not read file :  %s \n", query_init_pcd_path.c_str());
+        return 0;
+    }
+
+    pcl::toROSMsg(*central_pcd, CentralCloud);
+    CentralCloud.header.stamp = ros::Time::now();
+    CentralCloud.header.frame_id = "base";
+
+    pcl::toROSMsg(*query_pcd, QueryCloud);
+    QueryCloud.header.stamp = ros::Time::now();
+    QueryCloud.header.frame_id = "base";
+
+    pcl::toROSMsg(*query_init_pcd, QueryInitCloud);
+    QueryInitCloud.header.stamp = ros::Time::now();
+    QueryInitCloud.header.frame_id = "base";
+
+    transform_origin(central_pcd,x1,y1,z1);
+    transform_origin(query_pcd,x1,y1,z1);
+    transform_origin(query_init_pcd,x2,y2,z2);
 
     while (ros::ok())
     {
-
-        // empty_polygon.header.stamp = ros::Time::now();
-        // filteredcloud_pub.publish(TargetCloud2);
+        CentralCloud.header.stamp = ros::Time::now();
+        QueryCloud.header.stamp = ros::Time::now();
+        QueryInitCloud.header.stamp = ros::Time::now();
+        central_pcd_pub.publish(CentralCloud);
+        query_pcd_pub.publish(QueryCloud);
+        query_init_pcd_pub.publish(QueryInitCloud);
 
         loop_rate.sleep();
         ros::spinOnce();

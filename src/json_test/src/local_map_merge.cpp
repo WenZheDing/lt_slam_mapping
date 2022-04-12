@@ -460,11 +460,14 @@ int main(int argc, char **argv)
         else if (topic == std::string(imu_topic) && !imu_init)
         {
             sensor_msgs::Imu::ConstPtr pRtk = m.instantiate<sensor_msgs::Imu>();
-            o_imu_msg_.AngleHeading = pRtk->orientation.w;
-            transform_llh_to_xyz(pRtk->orientation.y, pRtk->orientation.x, pRtk->orientation.z, o_imu_msg_.x, o_imu_msg_.y, o_imu_msg_.z);
-            if (pRtk->orientation_covariance[2] == 4)
+            if (pRtk != NULL)
             {
-                imu_init = true;
+                o_imu_msg_.AngleHeading = pRtk->orientation.w;
+                transform_llh_to_xyz(pRtk->orientation.y, pRtk->orientation.x, pRtk->orientation.z, o_imu_msg_.x, o_imu_msg_.y, o_imu_msg_.z);
+                if (pRtk->orientation_covariance[2] == 4)
+                {
+                    imu_init = true;
+                }
             }
         }
         if (imu_init && lidar_init)

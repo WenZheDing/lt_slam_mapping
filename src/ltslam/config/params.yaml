@@ -7,20 +7,20 @@ ltslam:
   
   # save_directory: "/home/ding/mapper_ws/src/lt-mapper/pcdfiles/out/01-02-manyloops/" # end with "/"
 
-  sessions_dir: "/home/ding/backup/dataset/haibo/" # end with / 
+  sessions_dir: "/home/ding/backup/dataset/haibo/data" # end with / 
 
   # central_sess_name: "lt_lidar_map" # should be same as the directory name of that session
-  central_sess_name: "04" 
+  central_sess_name: "0313_1" 
   # query_sess_name: "02"
-  query_sess_name: "06" 
+  query_sess_name: "0313" 
   # should be same as the directory name of that session
   
-  save_directory: "/home/ding/backup/dataset/haibo/out/01-02-manyloops/" # end with "/"
+  # save_directory: "/home/ding/backup/dataset/haibo/out/01-02-manyloops/" # end with "/"
 
-  is_display_debug_msgs: true
+  is_display_debug_msgs: false
 
   SCloopFitnessScoreThreshold: 1.0  # 0.7 
-  RSloopFitnessScoreThreshold: 3.0
+  RSloopFitnessScoreThreshold: 1.0
 
   kNumSCLoopsUpperBound: 1000 # if you use an enough number, use all the detected loops 
   kNumRSLoopsUpperBound: 50 # if you use an enough number, use all the detected loops 
