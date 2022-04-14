@@ -84,21 +84,26 @@ public:
         // nh_.getParam("map_pcd_path", map_pcd_path);
         // nh_.getParam("final_map_path", final_map_path);
 
-        if (update_map)
-        {
-            map_path = map_path + "/update";
-        }
-
         sc_path = map_path + "/SCDs";
         key_frames_path = map_path + "/key_frames";
-        saved_json_path = map_path + "/global_map.json";
-        map_pcd_path = map_path + "/original_map.pcd";
+        dense_key_frames_path = map_path + "/dense_key_frames";
+        // saved_json_path = map_path + "/global_map.json";
+        // map_pcd_path = map_path + "/original_map.pcd";
         final_map_path = map_path + "/map.pcd";
         original_map_pcd = map_path + "/original_map.pcd";
         dense_map_pcd = map_path + "/dense_map.pcd";
         submap_path = map_path + "/submap";
         scans_path = map_path + "/Scans";
+        update_map_path = map_path + "/update";
         optimized_pose_path = map_path + "/out/" + optimized_pose_path;
+
+        if (update_map)
+        {
+            cout << "update map!!!!!!!!!" << endl;
+            final_map_path = update_map_path + "/updated_map.pcd";
+            original_map_pcd = update_map_path + "/original_map.pcd";
+            dense_map_pcd = update_map_path + "/dense_map.pcd";
+        }
 
         //ros
         pubMap = nh.advertise<sensor_msgs::PointCloud2>("/map", 2);
@@ -199,54 +204,75 @@ public:
         lidar_topic_num = 0;
         lidar_topic_count = 0;
 
-        pgTimeSaveStream = std::fstream(map_path + "/" + "times.txt", std::fstream::out);
-        pgTimeSaveStream.precision(std::numeric_limits<double>::max_digits10);
-
-        pgSaveStream = std::fstream(map_path + "/singlesession_posegraph.g2o", std::fstream::out);
-        rtkSaveStream = std::fstream(map_path + "/singlesession_rtkpose.g2o", std::fstream::out);
-
-        if (access(map_path.c_str(), 6) != 0)
+        if (!update_map)
         {
-            int map_create = mkdir(map_path.c_str(), S_IRUSR | S_IWUSR | S_IXUSR | S_IRWXG | S_IRWXO);
-            if (!map_create)
-                printf("create map_path:%s\n", map_path.c_str());
-            else
-                printf("create map_path failed! error code : %d \n", map_create);
-        }
-        if (access(sc_path.c_str(), 6) != 0)
-        {
-            int sc_create = mkdir(sc_path.c_str(), S_IRUSR | S_IWUSR | S_IXUSR | S_IRWXG | S_IRWXO);
-            if (!sc_create)
-                printf("create sc_path:%s\n", sc_path.c_str());
-            else
-                printf("create sc_path failed! error code : %d \n", sc_create);
-        }
-        if (access(key_frames_path.c_str(), 6) != 0)
-        {
-            int key_frames_create = mkdir(key_frames_path.c_str(), S_IRUSR | S_IWUSR | S_IXUSR | S_IRWXG | S_IRWXO);
-            if (!key_frames_create)
-                printf("create key_frames_path:%s\n", key_frames_path.c_str());
-            else
-                printf("create key_frames_path failed! error code : %d \n", key_frames_create);
-        }
+            pgTimeSaveStream = std::fstream(map_path + "/" + "times.txt", std::fstream::out);
+            pgTimeSaveStream.precision(std::numeric_limits<double>::max_digits10);
 
-        if (access(scans_path.c_str(), 6) != 0)
-        {
-            int scans_create = mkdir(scans_path.c_str(), S_IRUSR | S_IWUSR | S_IXUSR | S_IRWXG | S_IRWXO);
-            if (!scans_create)
-                printf("create scans_path:%s\n", scans_path.c_str());
-            else
-                printf("create scans_path failed! error code : %d \n", scans_create);
-        }
+            pgSaveStream = std::fstream(map_path + "/singlesession_posegraph.g2o", std::fstream::out);
+            rtkSaveStream = std::fstream(map_path + "/singlesession_rtkpose.g2o", std::fstream::out);
 
-        // if (access(submap_path.c_str(), 6) != 0)
-        // {
-        //     int submap_create = mkdir(submap_path.c_str(), S_IRUSR | S_IWUSR | S_IXUSR | S_IRWXG | S_IRWXO);
-        //     if (!submap_create)
-        //         printf("create submap_path:%s\n", submap_path.c_str());
-        //     else
-        //         printf("create submap_path failed! error code : %d \n", submap_create);
-        // }
+            if (access(map_path.c_str(), 6) != 0)
+            {
+                int map_create = mkdir(map_path.c_str(), S_IRUSR | S_IWUSR | S_IXUSR | S_IRWXG | S_IRWXO);
+                if (!map_create)
+                    printf("create map_path:%s\n", map_path.c_str());
+                else
+                    printf("create map_path failed! error code : %d \n", map_create);
+            }
+            if (access(sc_path.c_str(), 6) != 0)
+            {
+                int sc_create = mkdir(sc_path.c_str(), S_IRUSR | S_IWUSR | S_IXUSR | S_IRWXG | S_IRWXO);
+                if (!sc_create)
+                    printf("create sc_path:%s\n", sc_path.c_str());
+                else
+                    printf("create sc_path failed! error code : %d \n", sc_create);
+            }
+            if (access(key_frames_path.c_str(), 6) != 0)
+            {
+                int key_frames_create = mkdir(key_frames_path.c_str(), S_IRUSR | S_IWUSR | S_IXUSR | S_IRWXG | S_IRWXO);
+                if (!key_frames_create)
+                    printf("create key_frames_path:%s\n", key_frames_path.c_str());
+                else
+                    printf("create key_frames_path failed! error code : %d \n", key_frames_create);
+            }
+            if (access(dense_key_frames_path.c_str(), 6) != 0)
+            {
+                int dense_key_frames_create = mkdir(dense_key_frames_path.c_str(), S_IRUSR | S_IWUSR | S_IXUSR | S_IRWXG | S_IRWXO);
+                if (!dense_key_frames_create)
+                    printf("create dense_key_frames_path:%s\n", dense_key_frames_path.c_str());
+                else
+                    printf("create dense_key_frames_path failed! error code : %d \n", dense_key_frames_create);
+            }
+            if (access(scans_path.c_str(), 6) != 0)
+            {
+                int scans_create = mkdir(scans_path.c_str(), S_IRUSR | S_IWUSR | S_IXUSR | S_IRWXG | S_IRWXO);
+                if (!scans_create)
+                    printf("create scans_path:%s\n", scans_path.c_str());
+                else
+                    printf("create scans_path failed! error code : %d \n", scans_create);
+            }
+
+            // if (access(submap_path.c_str(), 6) != 0)
+            // {
+            //     int submap_create = mkdir(submap_path.c_str(), S_IRUSR | S_IWUSR | S_IXUSR | S_IRWXG | S_IRWXO);
+            //     if (!submap_create)
+            //         printf("create submap_path:%s\n", submap_path.c_str());
+            //     else
+            //         printf("create submap_path failed! error code : %d \n", submap_create);
+            // }
+        }
+        else
+        {
+            if (access(update_map_path.c_str(), 6) != 0)
+            {
+                int update_map_create = mkdir(update_map_path.c_str(), S_IRUSR | S_IWUSR | S_IXUSR | S_IRWXG | S_IRWXO);
+                if (!update_map_create)
+                    printf("create update_map_path:%s\n", update_map_path.c_str());
+                else
+                    printf("create update_map_path failed! error code : %d \n", update_map_create);
+            }
+        }
     }
 
     void getRtkPose()
@@ -354,6 +380,10 @@ public:
 
     void get_number_of_lidar_topic()
     {
+        if (update_map)
+        {
+            return;
+        }
         rosbag::Bag bag;
         bag.open(bag_path, rosbag::bagmode::Read);
 
@@ -369,6 +399,10 @@ public:
 
     void mapping()
     {
+        if (update_map)
+        {
+            return;
+        }
         rosbag::Bag bag;
         bag.open(bag_path, rosbag::bagmode::Read);
 
@@ -426,7 +460,9 @@ public:
                 else
                 {
                     Eigen::Matrix4f trans(Eigen::Matrix4f::Identity());
-                    //guess pose，根据新点云对应的时间的rtk和上一帧点云对应的时间的rtk，做差值并给上一帧的odometry作为先验
+                    // guess pose，根据新点云对应的时间的rtk和上一帧点云对应的时间的rtk，做差值并给上一帧的odometry作为先验
+                    // input点云在这一帧，target点云是上一帧的子地图，坐标系不同，init_guess是两个坐标系间的q t
+                    // 点云的观测模型不是理想的，会受到视角影响，不过一般可以忽略；但可能影响ndt得分
                     Eigen::Vector3d t_guess = t_odometry + t_lidar_rtk - t_lidar_rtk_last;
                     Eigen::Quaterniond q_guess = q_lidar_rtk * q_lidar_rtk_last.conjugate() * q_odometry;
                     Eigen::Translation3d init_translation(t_guess(0), t_guess(1), t_guess(2));
@@ -574,6 +610,8 @@ public:
         thisKeyFrameDS->width = thisKeyFrameDS->points.size();
         std::string key_frames_pcd = key_frames_path + "/" + std::to_string(CloudKeyFrames.size()) + ".pcd";
         pcl::io::savePCDFileASCII(key_frames_pcd, *thisKeyFrameDS);
+        std::string dense_key_frames_pcd = dense_key_frames_path + "/" + std::to_string(CloudKeyFrames.size()) + ".pcd";
+        pcl::io::savePCDFileASCII(dense_key_frames_pcd, *thisKeyFrame);
 
         pcl::io::savePCDFileBinary(scans_path + "/" + curr_scd_node_idx + ".pcd", *thisKeyFrameDS);
         pgTimeSaveStream << odometry_time << std::endl;
@@ -662,6 +700,7 @@ public:
         ndt.setInputTarget(pRSTargetCloud);
 
         Eigen::Matrix4f trans(Eigen::Matrix4f::Identity());
+        // 此处都转到全局坐标系下，q和t应该都是单位阵和(0,0,0) 此处初值没意义 可拿有回环场景测试匹配率
         Eigen::Quaterniond q_guess(1, 0, 0, 0);
         Eigen::Vector3d t_guess = (pointcloud_t[detected_history_keyframe_id] - pointcloud_t[current_keyframe_id]) - (rtk_t[detected_history_keyframe_id] - rtk_t[current_keyframe_id]);
         printf("q_guess: %.2lf, %.2lf, %.2lf, %.2lf\n", q_guess.x(), q_guess.y(), q_guess.z(), q_guess.w());
@@ -928,7 +967,21 @@ public:
                 splitPoseFileLine(strOneLine, pointcloud_q, pointcloud_t);
             }
             cout << "size of pointcloud_q:  " << pointcloud_q.size() << endl;
-            final_map_path = map_path + "/updated_map.pcd";
+            cout << "总共" << pointcloud_q.size() << "帧" << endl;
+            // load pointcloud
+            for (int i = 1; i <= pointcloud_q.size(); i++)
+            {
+                string init_cloud_path = dense_key_frames_path + "/" + std::to_string(i) + ".pcd";
+                pcl::PointCloud<pcl::PointXYZI>::Ptr init_cloud(new pcl::PointCloud<pcl::PointXYZI>);
+                if (pcl::io::loadPCDFile<pcl::PointXYZI>(init_cloud_path, *init_cloud) == -1)
+                {
+                    PCL_ERROR("Could not read file :  %s \n", init_cloud_path.c_str());
+                    return;
+                }
+                CloudKeyFrames.push_back(init_cloud);
+                float percentage = (float)i / pointcloud_q.size();
+                cout << "\n当前更新进度：" << setprecision(4) << percentage * 100 << "%" << endl;
+            }
             // proved unused
             // double origin_yaw_in_central_sess;
             // Eigen::Vector3d eulerAngle = pointcloud_q[0].matrix().eulerAngles(2, 1, 0);
@@ -936,9 +989,9 @@ public:
             // std::cout << "[revised]: The heading of origin is : " << origin_heading << " - " << origin_yaw_in_central_sess << std::endl;
             // origin_heading = origin_heading - origin_yaw_in_central_sess;
         }
-        for (int i = 0; i < KeyFramePoses3D->points.size(); i++)
+        for (int i = 0; i < CloudKeyFrames.size(); i++)
         {
-            if (i * save_map_dist > KeyFramePoses3D->points.size())
+            if (i * save_map_dist > CloudKeyFrames.size())
             {
                 break;
             }
@@ -962,8 +1015,11 @@ public:
         FinalMap2.header.frame_id = "/map";
         pubMap.publish(FinalMap2);
 
-        printf("saving TUM format... \n");
-        saveTUMformat();
+        if (!update_map)
+        {
+            printf("saving TUM format... \n");
+            saveTUMformat();
+        }
 
         if (!save_map)
         {
@@ -1057,9 +1113,9 @@ public:
         /*                transform the pc coordinate towards the north               */
         /* -------------------------------------------------------------------------- */
         pcl::PointCloud<pcl::PointXYZI>::Ptr pcd_cloud(new pcl::PointCloud<pcl::PointXYZI>);
-        if (pcl::io::loadPCDFile<pcl::PointXYZI>(map_pcd_path, *pcd_cloud) == -1)
+        if (pcl::io::loadPCDFile<pcl::PointXYZI>(original_map_pcd, *pcd_cloud) == -1)
         {
-            PCL_ERROR("Could not read file :  %s \n", map_pcd_path.c_str());
+            PCL_ERROR("Could not read file :  %s \n", original_map_pcd.c_str());
             return;
         }
         double torad_ = M_PI / 180;
@@ -1073,6 +1129,10 @@ public:
         cloud_after_rotation->height = 1;
         cloud_after_rotation->width = cloud_after_rotation->points.size();
         pcl::io::savePCDFileASCII(final_map_path, *cloud_after_rotation);
+        if (update_map)
+        {
+            return;
+        }
 
         // save pose graph (runs when programe is closing)
         printf("pcd map saved ~~~ \n");
@@ -1235,12 +1295,15 @@ private:
     bool update_map;
     string sc_path;
     string key_frames_path;
+    string dense_key_frames_path;
     string lidar_topic;
     string imu_topic;
+    string update_map_path;
+
     /* -------------------------------------------------------------------------- */
     /*                          occupancy grid map param                          */
     /* -------------------------------------------------------------------------- */
-    string map_pcd_path;
+    // string map_pcd_path;
     double min_distance;
     double max_distance;
     int occupancy_grid_map_width;
@@ -1365,7 +1428,7 @@ private:
     //processing monitor param
     int lidar_topic_num;
     int lidar_topic_count;
-    string saved_json_path;
+    // string saved_json_path;
     string final_map_path;
     string optimized_pose_path;
     string former_bag_path;

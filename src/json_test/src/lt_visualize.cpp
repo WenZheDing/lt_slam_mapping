@@ -112,6 +112,10 @@ int main(int argc, char **argv)
         return 0;
     }
 
+    transform_origin(central_pcd,x1,y1,z1);
+    transform_origin(query_pcd,x1,y1,z1);
+    transform_origin(query_init_pcd,x2,y2,z2);
+    
     pcl::toROSMsg(*central_pcd, CentralCloud);
     CentralCloud.header.stamp = ros::Time::now();
     CentralCloud.header.frame_id = "base";
@@ -124,9 +128,6 @@ int main(int argc, char **argv)
     QueryInitCloud.header.stamp = ros::Time::now();
     QueryInitCloud.header.frame_id = "base";
 
-    transform_origin(central_pcd,x1,y1,z1);
-    transform_origin(query_pcd,x1,y1,z1);
-    transform_origin(query_init_pcd,x2,y2,z2);
 
     while (ros::ok())
     {
