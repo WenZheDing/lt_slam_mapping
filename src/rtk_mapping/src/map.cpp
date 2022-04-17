@@ -95,7 +95,7 @@ public:
         submap_path = map_path + "/submap";
         scans_path = map_path + "/Scans";
         update_map_path = map_path + "/update";
-        optimized_pose_path = map_path + "/out/" + optimized_pose_path;
+        optimized_pose_path = map_path + "/update/out/" + optimized_pose_path;
 
         if (update_map)
         {
