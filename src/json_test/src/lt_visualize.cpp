@@ -90,6 +90,7 @@ int main(int argc, char **argv)
             }
         }
     }
+    // 由rtk算得的第一帧相对q和t
     std::cout << "q:   " << q.x() << "  " << q.y() << "  " << q.z() << "  " << q.w() << "  " << std::endl;
     std::cout << "t:   " << t(0) << "  " << t(1) << "  " << t(2) << "  " << std::endl;
     gtsam::Rot3 testrot = gtsam::Rot3(q);

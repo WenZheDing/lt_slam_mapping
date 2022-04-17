@@ -10,10 +10,14 @@ ltslam:
   sessions_dir: "/home/ding/backup/dataset/haibo/data" # end with / 
 
   # central_sess_name: "lt_lidar_map" # should be same as the directory name of that session
-  central_sess_name: "0313_1" 
   # query_sess_name: "02"
-  query_sess_name: "0313" 
-  # should be same as the directory name of that session
+
+  # central_sess_name: "0313_1" 
+  # query_sess_name: "0313" 
+
+  central_sess_name: "0414" 
+  query_sess_name: "0405" 
+
   
   # save_directory: "/home/ding/backup/dataset/haibo/out/01-02-manyloops/" # end with "/"
 

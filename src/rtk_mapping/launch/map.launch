@@ -4,26 +4,31 @@
     
     <!-- <param name="bag_path" type="string" value="/home/ding/backup/dataset/haibo/0119s95.bag" />
     <param name="map_path" type="string" value="/home/ding/backup/dataset/haibo/lt_lidar_map" />
-
     <arg name="arg_bag_path" default="/home/ding/backup/dataset/haibo/0118_2s95.bag"/>
     <arg name="arg_map_path" default="/home/ding/backup/dataset/haibo/02"/>
-
     <arg name="arg_bag_path" default="/home/ding/backup/dataset/haibo/0119filter.bag"/>
     <arg name="arg_map_path" default="/home/ding/backup/dataset/haibo/03"/>-->
 
-    <!-- <arg name="arg_bag_path" default="/home/ding/backup/dataset/haibo/data/0313_2/0313b95.bag"/>
-    <arg name="arg_map_path" default="/home/ding/backup/dataset/haibo/05"/>--> -->
 
     <!-- <arg name="arg_bag_path" default="/home/ding/backup/dataset/haibo/data/0313_1/0313b95.bag"/>
     <arg name="arg_map_path" default="/home/ding/backup/dataset/haibo/data/0313_1"/> -->
+    <!-- <arg name="arg_bag_path" default="/home/ding/backup/dataset/haibo/data/0313/bb95_0313.bag"/>
+    <arg name="arg_map_path" default="/home/ding/backup/dataset/haibo/data/0313"/>--> -->
+    <!-- <param name="optimized_pose_path" type="string" value="0313_central_aft_intersession_loops.txt" /> 
+    <param name="former_bag_path" type="string" value="/home/ding/backup/dataset/haibo/data/0313_1/0313b95.bag" /> -->
 
-    <arg name="arg_bag_path" default="/home/ding/backup/dataset/haibo/data/0313/bb95_0313.bag"/>
-    <arg name="arg_map_path" default="/home/ding/backup/dataset/haibo/data/0313"/>-->
+
+    <arg name="arg_bag_path" default="/home/ding/backup/dataset/haibo/data/0405/0405bad.bag"/>
+    <arg name="arg_map_path" default="/home/ding/backup/dataset/haibo/data/0405"/>-->
+    <!-- <arg name="arg_bag_path" default="/home/ding/backup/dataset/haibo/data/0414/0414good.bag"/>
+    <arg name="arg_map_path" default="/home/ding/backup/dataset/haibo/data/0414"/>--> -->
+    <param name="optimized_pose_path" type="string" value="0405_central_aft_intersession_loops.txt" /> 
+    <param name="former_bag_path" type="string" value="/home/ding/backup/dataset/haibo/data/0414/0414good.bag" />
 
     <param name="bag_path" type="string" value="$(arg arg_bag_path)" />
     <param name="map_path" type="string" value="$(arg arg_map_path)" />
-    <param name="optimized_pose_path" type="string" value="0313_central_aft_intersession_loops.txt" /> 
-    <param name="former_bag_path" type="string" value="/home/ding/backup/dataset/haibo/data/0313_1/0313b95.bag" />
+    <!-- <param name="optimized_pose_path" type="string" value="0313_central_aft_intersession_loops.txt" /> 
+    <param name="former_bag_path" type="string" value="/home/ding/backup/dataset/haibo/data/0313_1/0313b95.bag" /> -->
 
     <param name="imu_topic" type="string" value="/imu_data"/>
     <param name="lidar_topic" type="string" value="/lidar_aeb/raw_points"/>
