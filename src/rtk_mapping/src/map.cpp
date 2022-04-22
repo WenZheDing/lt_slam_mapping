@@ -196,7 +196,8 @@ public:
         dist = map_dist;
 
         //manul params
-        surroundingKeyframeSearchRadius = 25;
+        // surroundingKeyframeSearchRadius = 25;
+        surroundingKeyframeSearchRadius = 15;
         recentKeyFramesNum = 10;
 
         //debug
@@ -461,8 +462,9 @@ public:
                 {
                     Eigen::Matrix4f trans(Eigen::Matrix4f::Identity());
                     // guess pose，根据新点云对应的时间的rtk和上一帧点云对应的时间的rtk，做差值并给上一帧的odometry作为先验
-                    // input点云在这一帧，target点云是上一帧的子地图，坐标系不同，init_guess是两个坐标系间的q t
+                    // input点云在这一帧，target点云是上一帧的子地图(全局坐标系下)，坐标系不同，init_guess是两个坐标系间的q t
                     // 点云的观测模型不是理想的，会受到视角影响，不过一般可以忽略；但可能影响ndt得分
+                    // 此处t_odometry是上一帧的里程计位姿
                     Eigen::Vector3d t_guess = t_odometry + t_lidar_rtk - t_lidar_rtk_last;
                     Eigen::Quaterniond q_guess = q_lidar_rtk * q_lidar_rtk_last.conjugate() * q_odometry;
                     Eigen::Translation3d init_translation(t_guess(0), t_guess(1), t_guess(2));
@@ -702,7 +704,8 @@ public:
         Eigen::Matrix4f trans(Eigen::Matrix4f::Identity());
         // 此处都转到全局坐标系下，q和t应该都是单位阵和(0,0,0) 此处初值没意义 可拿有回环场景测试匹配率
         Eigen::Quaterniond q_guess(1, 0, 0, 0);
-        Eigen::Vector3d t_guess = (pointcloud_t[detected_history_keyframe_id] - pointcloud_t[current_keyframe_id]) - (rtk_t[detected_history_keyframe_id] - rtk_t[current_keyframe_id]);
+        // Eigen::Vector3d t_guess = (pointcloud_t[detected_history_keyframe_id] - pointcloud_t[current_keyframe_id]) - (rtk_t[detected_history_keyframe_id] - rtk_t[current_keyframe_id]);
+        Eigen::Vector3d t_guess(0, 0, 0);
         printf("q_guess: %.2lf, %.2lf, %.2lf, %.2lf\n", q_guess.x(), q_guess.y(), q_guess.z(), q_guess.w());
         printf("t_guess: %.2lf, %.2lf, %.2lf\n", t_guess(0), t_guess(1), t_guess(2));
         Eigen::Translation3d init_translation(t_guess(0), t_guess(1), t_guess(2));
